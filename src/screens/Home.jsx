@@ -111,7 +111,7 @@ export default function Home() {
                   className="btn btn-ghost btn-sm"
                   style={{ flex:1, padding:'12px 0', fontSize:12 }}
                   onClick={clearSession}
-                >✕ Effacer</button>
+                >⎋ Se déconnecter</button>
               </div>
             </div>
           </div>

@@ -36,6 +36,20 @@ export default function PartyPage() {
   const navigate    = useNavigate()
   const party       = useParty(partyId)
 
+  const [session, setSession] = useState(null)
+
+  useEffect(() => {
+    try {
+      const raw = localStorage.getItem('dp_session')
+      if (raw) setSession(JSON.parse(raw))
+    } catch {}
+  }, [])
+
+  const clearSession = () => {
+    localStorage.removeItem('dp_session')
+    setSession(null)
+  }
+
   if (!party) return (
     <div className="screen screen-bg-purple">
       <div className="bg-grid"/>
@@ -56,6 +70,10 @@ export default function PartyPage() {
   const lvlColors = { soft:'var(--g)', med:'var(--y)', hard:'var(--p)' }
   const lvlLabels = { soft:'😄 Fun & Soft', med:'😏 Drôle & Engagé', hard:'😈 Carrément Hard' }
   const playerCount = Object.keys(party.players||{}).length
+
+  const isSessionForThisParty = session?.partyId === partyId
+  const sessionPlayer = isSessionForThisParty ? party.players?.[session?.playerId] : null
+  const isPlayerConnected = Boolean(sessionPlayer)
 
   return (
     <div className="screen screen-bg-purple">
@@ -131,6 +149,30 @@ export default function PartyPage() {
           <button className="btn btn-y" onClick={() => navigate(`/podium/${partyId}`)}>
             🏆 VOIR LE PODIUM
           </button>
+
+        ) : isPlayerConnected ? (
+          /* Joueur déjà connecté pour cette soirée */
+          <>
+            <div style={{
+              background:'rgba(0,245,255,.08)', border:'1px solid rgba(0,245,255,.25)',
+              borderRadius:16, padding:16, textAlign:'center', marginBottom:14,
+            }}>
+              <div style={{ fontSize:14, fontWeight:900, color:'var(--c)', marginBottom:6 }}>
+                ✅ Connecté en tant que {sessionPlayer.name}
+              </div>
+              <div style={{ fontSize:12, color:'rgba(255,255,255,.55)', lineHeight:1.6 }}>
+                Tu peux reprendre ta session ou la quitter.
+              </div>
+            </div>
+            <div style={{ display:'flex', flexDirection:'column', gap:10 }}>
+              <button className="btn btn-g" style={{ color:'var(--dk)' }} onClick={() => navigate(`/dashboard/${partyId}/${sessionPlayer.id}`)}>
+                ▶ REJOINDRE
+              </button>
+              <button className="btn btn-ghost" onClick={clearSession}>
+                ✕ QUITTER LA SESSION
+              </button>
+            </div>
+          </>
 
         ) : !regOpen ? (
           /* Inscriptions pas encore ouvertes */

@@ -15,10 +15,11 @@ function compressPhoto(file) {
       const img = new Image()
       img.onload = () => {
         const canvas = document.createElement('canvas')
-        const s = Math.min(200, img.width, img.height)
-        canvas.width = s; canvas.height = s
+        const out = 200
+        const s = Math.min(img.width, img.height)
+        canvas.width = out; canvas.height = out
         const ctx = canvas.getContext('2d')
-        ctx.drawImage(img, (img.width - s) / 2, (img.height - s) / 2, s, s, 0, 0, s, s)
+        ctx.drawImage(img, (img.width - s) / 2, (img.height - s) / 2, s, s, 0, 0, out, out)
         resolve(canvas.toDataURL('image/jpeg', 0.75))
       }
       img.src = e.target.result
@@ -37,6 +38,8 @@ export default function Register() {
   const [year, setYear] = useState('')
   const [photo, setPhoto] = useState(null)
   const [loading, setLoading] = useState(false)
+  const [askCode, setAskCode] = useState(false)
+  const [codeInput, setCodeInput] = useState('')
 
   useEffect(() => {
     if (!user) return
@@ -52,16 +55,8 @@ export default function Register() {
     setPhoto(compressed)
   }
 
-  const handleRegister = async () => {
-    if (!name.trim()) { showToast('⚠️ Entre ton prénom !', '#FF6B00'); return }
-    if (!year || year.length !== 4) { showToast('⚠️ Entre ton année de naissance !', '#FF6B00'); return }
+  const doRegister = async () => {
     if (!party) return
-
-    // Ask for party code
-    const code = prompt(`🔐 Entre le code de la soirée "${party.name}" :`)
-    if (!code) return
-    if (code.toUpperCase() !== party.code) { showToast('❌ Code incorrect !', '#FF3CAC'); return }
-
     const players = party.players || {}
     if (Object.values(players).find(p => p.name.toLowerCase() === name.trim().toLowerCase())) {
       showToast('⚠️ Ce prénom est déjà pris !', '#FF6B00'); return
@@ -101,6 +96,23 @@ export default function Register() {
     setLoading(false)
   }
 
+  const handleRegister = () => {
+    if (!name.trim()) { showToast('⚠️ Entre ton prénom !', '#FF6B00'); return }
+    if (!year || year.length !== 4) { showToast('⚠️ Entre ton année de naissance !', '#FF6B00'); return }
+    if (!party) return
+    setCodeInput('')
+    setAskCode(true)
+  }
+
+  const confirmCode = async () => {
+    if (!party) return
+    const code = codeInput.trim().toUpperCase()
+    if (!code) { showToast('⚠️ Entre le code de la soirée', '#FF6B00'); return }
+    if (code !== party.code) { showToast('❌ Code incorrect !', '#FF3CAC'); return }
+    setAskCode(false)
+    await doRegister()
+  }
+
   return (
     <div className="screen screen-bg-blue">
       <div className="bg-grid" />
@@ -129,7 +141,9 @@ export default function Register() {
           <label htmlFor="photoInput">
             <div className={`photo-area ${photo ? 'has-photo' : ''}`}>
               {photo ? (
-                <img src={photo} alt="preview" className="photo-preview" />
+                <div className="photo-preview-wrap">
+                  <img src={photo} alt="preview" className="photo-preview" />
+                </div>
               ) : (
                 <>
                   <div style={{ fontSize: 44 }}>🤳</div>
@@ -144,6 +158,34 @@ export default function Register() {
         <button className="btn btn-p" onClick={handleRegister} disabled={loading}>
           {loading ? '⏳ Inscription...' : '🕵️ REJOINDRE L\'OPÉRATION !'}
         </button>
+
+        {askCode && (
+          <div className="modal-overlay" onClick={() => setAskCode(false)}>
+            <div className="modal-box" onClick={e => e.stopPropagation()}>
+              <div style={{ fontFamily: 'Bangers, cursive', fontSize: 24, color: 'var(--y)', marginBottom: 6, letterSpacing: 1 }}>
+                🔐 Code d'accès
+              </div>
+              <div style={{ fontSize: 13, color: 'rgba(255,255,255,.55)', marginBottom: 14, lineHeight: 1.5 }}>
+                Entre le code de la soirée <strong>{party?.name}</strong> pour rejoindre l'opération.
+              </div>
+              <input
+                className="form-input"
+                value={codeInput}
+                onChange={e => setCodeInput(e.target.value)}
+                placeholder="Ex : AB12"
+                autoFocus
+              />
+              <div style={{ display: 'flex', gap: 10, marginTop: 12 }}>
+                <button className="btn btn-g" style={{ flex: 1, fontSize: 18, padding: 14, color:'var(--dk)' }} onClick={confirmCode}>
+                  ✅ Valider
+                </button>
+                <button className="btn btn-ghost" style={{ flex: 1, fontSize: 18, padding: 14 }} onClick={() => setAskCode(false)}>
+                  Annuler
+                </button>
+              </div>
+            </div>
+          </div>
+        )}
 
         <div style={{ height: 20 }} />
       </div>

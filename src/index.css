@@ -234,12 +234,20 @@ body {
   justify-content: center;
 }
 
-.photo-preview {
+.photo-preview-wrap {
   width: clamp(96px, 28vw, 140px);
   height: clamp(96px, 28vw, 140px);
   border-radius: 50%;
-  object-fit: cover;
+  overflow: hidden;
   border: 4px solid var(--p);
+  box-sizing: border-box;
+  display: block;
+}
+
+.photo-preview {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
   display: block;
 }
 

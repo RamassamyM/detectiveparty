@@ -2,6 +2,7 @@ import { useState } from 'react'
 import { useParams, useNavigate } from 'react-router-dom'
 import { useParty } from '../hooks/useParty'
 import Avatar from '../components/Avatar'
+import { ROLES } from '../data/roles'
 
 const MEDALS = ['🥇','🥈','🥉']
 
@@ -15,6 +16,7 @@ function Section({ title, color, players, scoreKey, scoreLabel }) {
       )}
       {sorted.map((p, i) => {
         const score = p[scoreKey] || 0
+        const role = ROLES[p.roleIndex % ROLES.length] || ROLES[0]
         return (
           <div key={p.id} style={{
             display:'flex', alignItems:'center', gap:12, padding:'10px 14px',
@@ -27,7 +29,7 @@ function Section({ title, color, players, scoreKey, scoreLabel }) {
             </div>
             <Avatar player={p} size={38} style={{ border:'2px solid rgba(255,255,255,.12)', borderRadius:'50%', flexShrink:0 }} />
             <div style={{ flex:1 }}>
-              <div style={{ fontWeight:800, fontSize:14 }}>{p.name}</div>
+              <div style={{ fontWeight:800, fontSize:14 }}>{p.name} <span style={{ color:'rgba(255,255,255,.4)', fontWeight:900, fontSize:12 }}>({role.n})</span></div>
               <div style={{ fontSize:11, color:'rgba(255,255,255,.4)' }}>
                 {score} {scoreLabel}
               </div>

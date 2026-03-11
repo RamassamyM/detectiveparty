@@ -31,6 +31,7 @@ export default function AdminDash() {
   const user        = useAuth()
 
   const [tab, setTab]                   = useState('overview')
+  const [rankTab, setRankTab]           = useState('top')
   const [playerQuery, setPlayerQuery]   = useState('')
   const [confirmDelete, setConfirmDelete] = useState(null)
   const [confirmDeleteParty, setConfirmDeleteParty] = useState(false)
@@ -311,30 +312,53 @@ export default function AdminDash() {
               </div>
             </div>
 
-            <div className="card" style={{ marginBottom:12 }}>
-              <div style={{ fontFamily:'Bangers, cursive', fontSize:18, color:'var(--y)', marginBottom:10, letterSpacing:1 }}>🔍 TOP DÉTECTIVES</div>
-              {detSorted.length === 0
-                ? <div style={{ color:'rgba(255,255,255,.3)', fontSize:13 }}>Aucun point encore.</div>
-                : detSorted.map((p,i) => (
-                  <div key={p.id} style={{ display:'flex', alignItems:'center', gap:10, padding:'7px 0', borderBottom:'1px solid var(--border)' }}>
-                    <div style={{ width:24, textAlign:'center' }}>{MEDALS[i]||i+1}</div>
-                    <div style={{ flex:1, fontWeight:800 }}>{p.name}</div>
-                    <div style={{ fontFamily:'Bangers, cursive', fontSize:20, color:'var(--y)' }}>{p.score||0} pts</div>
-                  </div>
-                ))
-              }
+            <div style={{ display:'flex', gap:8, marginBottom:12 }}>
+              <button onClick={() => setRankTab('top')} style={{
+                flex:1, padding:'10px 0', border:'none', borderRadius:12,
+                fontFamily:'Bangers, cursive', fontSize:16, letterSpacing:1, cursor:'pointer',
+                background: rankTab==='top' ? 'var(--y)' : 'rgba(255,255,255,.07)',
+                color: rankTab==='top' ? 'var(--dk)' : 'rgba(255,255,255,.5)',
+                transition:'all .2s',
+              }}>🔍 TOP</button>
+              <button onClick={() => setRankTab('flop')} style={{
+                flex:1, padding:'10px 0', border:'none', borderRadius:12,
+                fontFamily:'Bangers, cursive', fontSize:16, letterSpacing:1, cursor:'pointer',
+                background: rankTab==='flop' ? 'var(--p)' : 'rgba(255,255,255,.07)',
+                color: rankTab==='flop' ? '#fff' : 'rgba(255,255,255,.5)',
+                transition:'all .2s',
+              }}>💀 FLOP</button>
             </div>
 
-            <div className="card" style={{ marginBottom:14 }}>
-              <div style={{ fontFamily:'Bangers, cursive', fontSize:18, color:'var(--p)', marginBottom:10, letterSpacing:1 }}>💀 TOP COUPABLES</div>
-              {culSorted.map((p,i) => (
-                <div key={p.id} style={{ display:'flex', alignItems:'center', gap:10, padding:'7px 0', borderBottom:'1px solid var(--border)' }}>
-                  <div style={{ width:24, textAlign:'center' }}>{MEDALS[i]||i+1}</div>
-                  <div style={{ flex:1, fontWeight:800 }}>{p.name}</div>
-                  <div style={{ fontFamily:'Bangers, cursive', fontSize:20, color:'var(--p)' }}>{p.caughtCount||0} ×</div>
-                </div>
-              ))}
-            </div>
+            {rankTab === 'top' ? (
+              <div className="card" style={{ marginBottom:14 }}>
+                <div style={{ fontFamily:'Bangers, cursive', fontSize:18, color:'var(--y)', marginBottom:10, letterSpacing:1 }}>🔍 TOP DÉTECTIVES</div>
+                {detSorted.length === 0
+                  ? <div style={{ color:'rgba(255,255,255,.3)', fontSize:13 }}>Aucun point encore.</div>
+                  : detSorted.map((p,i) => (
+                    <div key={p.id} style={{ display:'flex', alignItems:'center', gap:10, padding:'7px 0', borderBottom:'1px solid var(--border)' }}>
+                      <div style={{ width:24, textAlign:'center' }}>{MEDALS[i]||i+1}</div>
+                      <div style={{ flex:1, fontWeight:800 }}>
+                        {p.name} <span style={{ color:'rgba(255,255,255,.4)', fontWeight:900, fontSize:12 }}>({(ROLES[p.roleIndex % ROLES.length] || ROLES[0]).n})</span>
+                      </div>
+                      <div style={{ fontFamily:'Bangers, cursive', fontSize:20, color:'var(--y)' }}>{p.score||0} pts</div>
+                    </div>
+                  ))
+                }
+              </div>
+            ) : (
+              <div className="card" style={{ marginBottom:14 }}>
+                <div style={{ fontFamily:'Bangers, cursive', fontSize:18, color:'var(--p)', marginBottom:10, letterSpacing:1 }}>💀 FLOP COUPABLES</div>
+                {culSorted.map((p,i) => (
+                  <div key={p.id} style={{ display:'flex', alignItems:'center', gap:10, padding:'7px 0', borderBottom:'1px solid var(--border)' }}>
+                    <div style={{ width:24, textAlign:'center' }}>{MEDALS[i]||i+1}</div>
+                    <div style={{ flex:1, fontWeight:800 }}>
+                      {p.name} <span style={{ color:'rgba(255,255,255,.4)', fontWeight:900, fontSize:12 }}>({(ROLES[p.roleIndex % ROLES.length] || ROLES[0]).n})</span>
+                    </div>
+                    <div style={{ fontFamily:'Bangers, cursive', fontSize:20, color:'var(--p)' }}>{p.caughtCount||0} ×</div>
+                  </div>
+                ))}
+              </div>
+            )}
             {party.ended && (
               <button className="btn btn-c" style={{ color:'var(--dk)' }} onClick={() => navigate(`/podium/${partyId}`)}>
                 🏆 VOIR LE PODIUM
