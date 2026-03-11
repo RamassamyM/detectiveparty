@@ -102,7 +102,10 @@ export default function PartyPage() {
             </span>
             {party.enabledTypes && (
               <span style={{ background:'rgba(255,255,255,.07)', borderRadius:10, padding:'6px 14px', fontSize:12, fontWeight:800 }}>
-                {party.enabledTypes.map(t => t==='soft'?'😄':t==='physique'?'💪':'🔥').join(' ')} Gages actifs
+                {party.enabledTypes
+                  .map(t => (t === 'physique' ? 'med' : t === 'ose' ? 'hard' : t))
+                  .map(t => t==='soft'?'😄':t==='med'?'😅':t==='hard'?'🔥':'💋')
+                  .join(' ')} Gages actifs
               </span>
             )}
             <span style={{ background:'rgba(255,255,255,.07)', borderRadius:10, padding:'6px 14px', fontSize:12, fontWeight:800 }}>
@@ -142,6 +145,40 @@ export default function PartyPage() {
             </div>
           </div>
         )}
+
+        <div style={{
+          background:'var(--cd)',
+          border:'1px solid rgba(255,255,255,.08)',
+          borderRadius:16,
+          padding:16,
+          marginBottom:16,
+        }}>
+          <div style={{ fontFamily:'Bangers, cursive', fontSize:18, color:'var(--c)', letterSpacing:1, marginBottom:10 }}>
+            🕵️ COMMENT JOUER
+          </div>
+          <div style={{ display:'flex', flexDirection:'column', gap:10, fontSize:12, color:'rgba(255,255,255,.65)', lineHeight:1.55 }}>
+            <div>
+              <strong style={{ color:'#fff' }}>1) Inscris-toi</strong>
+              <div style={{ marginTop:4 }}>Tu choisis ton prénom + ton avatar. L'année de naissance sert de <strong>code de reconnexion</strong>.</div>
+            </div>
+            <div>
+              <strong style={{ color:'#fff' }}>2) Reçois ton rôle</strong>
+              <div style={{ marginTop:4 }}>Un personnage de détective t'est attribué. Garde-le en tête : c'est ton identité pendant la soirée.</div>
+            </div>
+            <div>
+              <strong style={{ color:'#fff' }}>3) Le jeu démarre</strong>
+              <div style={{ marginTop:4 }}>À partir de <strong>{tsToLabel(gameStart)}</strong>, tu peux <strong>démasquer</strong> les autres agents.</div>
+            </div>
+            <div>
+              <strong style={{ color:'#fff' }}>4) Démasquer = marquer des points</strong>
+              <div style={{ marginTop:4 }}>Quand tu devines l'identité d'un joueur, tu choisis le gage que tu as déclenché et tu gagnes des points.</div>
+            </div>
+            <div>
+              <strong style={{ color:'#fff' }}>5) Si on te démasque…</strong>
+              <div style={{ marginTop:4 }}>Tu reçois un gage à faire. Les gages sont choisis parmi ceux activés par l'organisateur.</div>
+            </div>
+          </div>
+        </div>
 
         {/* ── ACTION ZONE ── */}
         {party.ended ? (

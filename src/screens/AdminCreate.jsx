@@ -3,7 +3,7 @@ import { useNavigate } from 'react-router-dom'
 import { useAuth } from '../hooks/useAuth'
 import { dbSet } from '../firebase'
 import { GAME_IMAGES } from '../data/roles'
-import { TRIGGERS, GAGE_TYPES } from '../data/gages'
+import { GAGES, GAGE_TYPES } from '../data/gages'
 import { showToast } from '../components/Toast'
 import { localToTs } from '../utils/time'
 
@@ -11,7 +11,7 @@ function genCode() {
   return Math.random().toString(36).substring(2, 8).toUpperCase()
 }
 
-const TYPE_ORDER = ['soft', 'physique', 'ose']
+const TYPE_ORDER = ['soft', 'med', 'hard', 'sexy']
 
 export default function AdminCreate() {
   const navigate = useNavigate()
@@ -30,7 +30,7 @@ export default function AdminCreate() {
   const [missions, setMissions] = useState(2)
   const [selectedImg, setSelectedImg] = useState(0)
   const [enabledTypes, setEnabledTypes] = useState(new Set(['soft']))
-  const [selectedTriggers, setSelectedTriggers] = useState(new Set(TRIGGERS.map(t => t.id)))
+  const [enabledGages, setEnabledGages] = useState(() => new Set(GAGES.map((g, i) => (g.lvl === 'soft' ? i : null)).filter(v => v !== null)))
   const [allowCustomGages, setAllowCustomGages] = useState(true)
   const [loading, setLoading]   = useState(false)
 
@@ -50,16 +50,33 @@ export default function AdminCreate() {
   const toggleType = (type) => {
     setEnabledTypes(prev => {
       const next = new Set(prev)
-      if (next.has(type) && next.size === 1) return prev
-      next.has(type) ? next.delete(type) : next.add(type)
+      const wasOn = next.has(type)
+      if (wasOn && next.size === 1) return prev
+
+      if (wasOn) {
+        next.delete(type)
+        setEnabledGages(prevG => {
+          const ng = new Set(prevG)
+          GAGES.forEach((g, i) => { if (g.lvl === type) ng.delete(i) })
+          return ng
+        })
+      } else {
+        next.add(type)
+        setEnabledGages(prevG => {
+          const ng = new Set(prevG)
+          GAGES.forEach((g, i) => { if (g.lvl === type) ng.add(i) })
+          return ng
+        })
+      }
+
       return next
     })
   }
 
-  const toggleTrigger = (id) => {
-    setSelectedTriggers(prev => {
+  const toggleGage = (idx) => {
+    setEnabledGages(prev => {
       const next = new Set(prev)
-      next.has(id) ? next.delete(id) : next.add(id)
+      next.has(idx) ? next.delete(idx) : next.add(idx)
       return next
     })
   }
@@ -74,8 +91,8 @@ export default function AdminCreate() {
     if ((endDate && !endTime) || (!endDate && endTime)) {
       showToast('⚠️ Pour la fin du jeu, indique une date ET une heure', '#FF6B00'); return
     }
-    if (selectedTriggers.size < missions) {
-      showToast(`⚠️ Sélectionne au moins ${missions} déclencheur(s) !`, '#FF6B00'); return
+    if (enabledGages.size < missions) {
+      showToast(`⚠️ Sélectionne au moins ${missions} gage(s) !`, '#FF6B00'); return
     }
 
     setLoading(true)
@@ -97,7 +114,7 @@ export default function AdminCreate() {
       missions,
       image: GAME_IMAGES[selectedImg].e,
       enabledTypes:      Array.from(enabledTypes),
-      selectedTriggers:  Array.from(selectedTriggers),
+      enabledGages:      Array.from(enabledGages),
       code,
       players: {},
       ended: false,
@@ -211,13 +228,13 @@ export default function AdminCreate() {
         <div className="form-group">
           <label className="form-label">Types de gages pour la victime</label>
           <p style={{ fontSize:12, color:'rgba(255,255,255,.4)', marginBottom:12, lineHeight:1.5 }}>
-            Quand un invité est "démasqué", il reçoit un gage tiré au sort parmi les types cochés.
+            Filtre la liste des gages disponibles.
           </p>
           <div style={{ display:'flex', flexDirection:'column', gap:10 }}>
             {TYPE_ORDER.map(type => {
               const cfg = GAGE_TYPES[type]
               const on  = enabledTypes.has(type)
-              const rgb = type==='soft'?'57,255,20':type==='physique'?'0,245,255':'255,60,172'
+              const rgb = type==='soft'?'57,255,20':type==='med'?'0,245,255':type==='hard'?'255,60,172':'255,106,213'
               return (
                 <div key={type} onClick={() => toggleType(type)} style={{
                   display:'flex', alignItems:'center', gap:14, cursor:'pointer', borderRadius:16,
@@ -249,7 +266,7 @@ export default function AdminCreate() {
               </div>
               {Array.from(enabledTypes).map(type => {
                 const cfg = GAGE_TYPES[type]
-                const ex  = TRIGGERS[2].gages[type]
+                const ex  = GAGES.find(g => g.lvl === type) || GAGES[0]
                 return (
                   <div key={type} style={{ display:'flex', gap:8, marginBottom:8, alignItems:'flex-start' }}>
                     <span style={{ fontSize:16 }}>{cfg.emoji}</span>
@@ -264,31 +281,35 @@ export default function AdminCreate() {
           )}
         </div>
 
-        {/* Triggers */}
+        {/* Gages */}
         <div className="form-group">
-          <label className="form-label">Déclencheurs activés ({selectedTriggers.size}/{TRIGGERS.length})</label>
+          <label className="form-label">Gages activés ({enabledGages.size}/{GAGES.length})</label>
           <div style={{ display:'flex', gap:8, marginBottom:10 }}>
-            <button className="btn btn-ghost btn-sm" style={{ flex:1 }} onClick={() => setSelectedTriggers(new Set(TRIGGERS.map(t=>t.id)))}>✅ Tout</button>
-            <button className="btn btn-ghost btn-sm" style={{ flex:1 }} onClick={() => setSelectedTriggers(new Set())}>❌ Aucun</button>
+            <button className="btn btn-ghost btn-sm" style={{ flex:1 }} onClick={() => setEnabledGages(new Set(GAGES.map((g, i) => (enabledTypes.has(g.lvl) ? i : null)).filter(v => v !== null)))}>✅ Tout</button>
+            <button className="btn btn-ghost btn-sm" style={{ flex:1 }} onClick={() => setEnabledGages(new Set())}>❌ Aucun</button>
           </div>
           <div style={{ maxHeight:320, overflowY:'auto', display:'flex', flexDirection:'column', gap:8 }}>
-            {TRIGGERS.map(t => {
-              const on = selectedTriggers.has(t.id)
+            {GAGES.map((g, idx) => {
+              if (!enabledTypes.has(g.lvl)) return null
+              const on = enabledGages.has(idx)
+              const cfg = GAGE_TYPES[g.lvl]
+              const rgb = g.lvl==='soft'?'57,255,20':g.lvl==='med'?'0,245,255':g.lvl==='hard'?'255,60,172':'255,106,213'
               return (
-                <div key={t.id} onClick={() => toggleTrigger(t.id)} className={`gage-pick-item ${on?'selected':''}`}>
+                <div key={idx} onClick={() => toggleGage(idx)} className={`gage-pick-item ${on?'selected':''}`}>
                   <div className="gpi-check">{on?'✓':''}</div>
                   <div style={{ flex:1 }}>
-                    <div className="gpi-trg">{t.trigger}</div>
-                    <div style={{ display:'flex', gap:6, flexWrap:'wrap', marginTop:4 }}>
-                      {TYPE_ORDER.filter(type => enabledTypes.has(type) && t.gages[type]).map(type => (
-                        <span key={type} style={{
-                          fontSize:9, fontWeight:900, padding:'2px 6px', borderRadius:5,
-                          background:`rgba(${type==='soft'?'57,255,20':type==='physique'?'0,245,255':'255,60,172'},.15)`,
-                          color: GAGE_TYPES[type].color,
-                        }}>
-                          {GAGE_TYPES[type].emoji} {t.gages[type].a.slice(0,45)}…
-                        </span>
-                      ))}
+                    <div className="gpi-trg">{g.t}</div>
+                    <div style={{ fontSize:12, color:'rgba(255,255,255,.65)', lineHeight:1.35, marginTop:6 }}>
+                      👉 {g.a}
+                    </div>
+                    <div style={{ marginTop:8 }}>
+                      <span style={{
+                        fontSize:9, fontWeight:900, padding:'2px 6px', borderRadius:5,
+                        background:`rgba(${rgb},.15)`,
+                        color: cfg.color,
+                      }}>
+                        {cfg.emoji} {cfg.label.toUpperCase()}
+                      </span>
                     </div>
                   </div>
                 </div>

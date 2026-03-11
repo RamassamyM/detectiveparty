@@ -8,6 +8,11 @@ import { GAGES } from '../data/gages'
 import { showToast } from '../components/Toast'
 import { logout } from '../firebase'
 
+const AVATARS = Array.from({ length: 18 }, (_, i) => {
+  const n = String(i + 1).padStart(2, '0')
+  return `/avatars/${n}.png`
+})
+
 function compressPhoto(file) {
   return new Promise((resolve) => {
     const reader = new FileReader()
@@ -40,6 +45,10 @@ export default function Register() {
   const [loading, setLoading] = useState(false)
   const [askCode, setAskCode] = useState(false)
   const [codeInput, setCodeInput] = useState('')
+  const [avatarMode, setAvatarMode] = useState('bank')
+  const [selectedAvatar, setSelectedAvatar] = useState(null)
+  const [noAvatarsLeft, setNoAvatarsLeft] = useState(false)
+  const [nameSuggestion, setNameSuggestion] = useState('')
 
   useEffect(() => {
     if (!user) return
@@ -53,13 +62,38 @@ export default function Register() {
     if (!file) return
     const compressed = await compressPhoto(file)
     setPhoto(compressed)
+    setSelectedAvatar(null)
+    setNoAvatarsLeft(false)
+  }
+
+  const selectAvatar = (src) => {
+    setSelectedAvatar(src)
+    setPhoto(src)
+  }
+
+  const computeNameSuggestion = (baseName, players) => {
+    const base = (baseName || '').trim()
+    if (!base) return ''
+    const existingLower = new Set(
+      Object.values(players || {})
+        .map(p => (p?.name || '').trim().toLowerCase())
+        .filter(Boolean)
+    )
+    if (!existingLower.has(base.toLowerCase())) return ''
+    let i = 2
+    while (existingLower.has(`${base} ${i}`.toLowerCase())) i++
+    return `${base} ${i}`
   }
 
   const doRegister = async () => {
     if (!party) return
     const players = party.players || {}
-    if (Object.values(players).find(p => p.name.toLowerCase() === name.trim().toLowerCase())) {
-      showToast('⚠️ Ce prénom est déjà pris !', '#FF6B00'); return
+    const trimmed = name.trim()
+    if (!trimmed) return
+    const existingLower = new Set(Object.values(players).map(p => (p?.name || '').trim().toLowerCase()).filter(Boolean))
+    if (existingLower.has(trimmed.toLowerCase())) {
+      showToast('⚠️ Ce prénom est déjà pris !', '#FF6B00')
+      return
     }
 
     setLoading(true)
@@ -81,7 +115,7 @@ export default function Register() {
 
     const id = Date.now().toString()
     const player = {
-      id, name: name.trim(), year, photo,
+      id, name: trimmed, year, photo,
       roleIndex, gageIndices, customGages: [],
       unmaskedIds: [], caughtCount: 0, score: 0,
     }
@@ -99,7 +133,14 @@ export default function Register() {
   const handleRegister = () => {
     if (!name.trim()) { showToast('⚠️ Entre ton prénom !', '#FF6B00'); return }
     if (!year || year.length !== 4) { showToast('⚠️ Entre ton année de naissance !', '#FF6B00'); return }
+    if (!photo) { showToast('⚠️ Choisis un avatar ou ajoute une photo', '#FF6B00'); return }
     if (!party) return
+    const suggestion = computeNameSuggestion(name, party.players || {})
+    if (suggestion) {
+      setNameSuggestion(suggestion)
+      showToast('⚠️ Prénom déjà pris : choisis-en un autre ou accepte la suggestion', '#FF6B00')
+      return
+    }
     setCodeInput('')
     setAskCode(true)
   }
@@ -112,6 +153,28 @@ export default function Register() {
     setAskCode(false)
     await doRegister()
   }
+
+  const players = party?.players ? Object.values(party.players) : []
+  const takenPhotos = new Set(players.map(p => p.photo).filter(Boolean))
+  const availableAvatars = AVATARS.filter(src => !takenPhotos.has(src))
+  const canSubmit = Boolean(name.trim()) && String(year).length === 4 && Boolean(photo) && !loading
+
+  useEffect(() => {
+    if (!party) { setNameSuggestion(''); return }
+    const suggestion = computeNameSuggestion(name, party.players || {})
+    setNameSuggestion(suggestion)
+  }, [party, name])
+
+  useEffect(() => {
+    if (!party) return
+    if (avatarMode !== 'bank') return
+    const noneLeft = availableAvatars.length === 0
+    setNoAvatarsLeft(noneLeft)
+    if (noneLeft) {
+      setAvatarMode('upload')
+      setSelectedAvatar(null)
+    }
+  }, [party, avatarMode, availableAvatars.length])
 
   return (
     <div className="screen screen-bg-blue">
@@ -126,6 +189,24 @@ export default function Register() {
         <div className="form-group">
           <label className="form-label">Ton prénom</label>
           <input className="form-input" value={name} onChange={e => setName(e.target.value)} placeholder="Ex : Sofia" autoComplete="off" />
+          {nameSuggestion && (
+            <div style={{ marginTop: 10, background: 'rgba(255,230,0,.06)', border: '1px solid rgba(255,230,0,.25)', borderRadius: 14, padding: '10px 12px' }}>
+              <div style={{ fontSize: 12, fontWeight: 900, color: 'rgba(255,230,0,.9)', letterSpacing: 1, marginBottom: 6 }}>
+                Prénom déjà pris
+              </div>
+              <div style={{ fontSize: 12, color: 'rgba(255,255,255,.65)', lineHeight: 1.4, marginBottom: 10 }}>
+                Suggestion disponible : <strong>{nameSuggestion}</strong>
+              </div>
+              <button
+                type="button"
+                className="btn btn-y"
+                style={{ width: '100%', padding: '12px 0', fontSize: 13, color: 'var(--dk)' }}
+                onClick={() => setName(nameSuggestion)}
+              >
+                Utiliser "{nameSuggestion}"
+              </button>
+            </div>
+          )}
         </div>
 
         <div className="form-group">
@@ -137,25 +218,69 @@ export default function Register() {
         </div>
 
         <div className="form-group">
-          <label className="form-label">Photo d'agent 📸</label>
-          <label htmlFor="photoInput">
-            <div className={`photo-area ${photo ? 'has-photo' : ''}`}>
-              {photo ? (
-                <div className="photo-preview-wrap">
-                  <img src={photo} alt="preview" className="photo-preview" />
-                </div>
-              ) : (
-                <>
-                  <div style={{ fontSize: 44 }}>🤳</div>
-                  <p>Clique pour prendre ou choisir une photo</p>
-                </>
-              )}
+          <label className="form-label">Avatar d'agent 🕵️</label>
+
+          <div className="avatar-mode">
+            <button
+              type="button"
+              className={`avatar-mode-btn ${avatarMode === 'bank' ? 'active' : ''}`}
+              onClick={() => setAvatarMode('bank')}
+              disabled={noAvatarsLeft}
+            >🎭 Choisir</button>
+            <button
+              type="button"
+              className={`avatar-mode-btn ${avatarMode === 'upload' ? 'active' : ''}`}
+              onClick={() => setAvatarMode('upload')}
+            >📸 Uploader</button>
+          </div>
+
+          {noAvatarsLeft && (
+            <div style={{ fontSize: 12, color: 'rgba(255,255,255,.55)', marginBottom: 10, lineHeight: 1.5 }}>
+              Tous les avatars prédéfinis sont déjà pris. Ajoute une photo pour continuer.
             </div>
-          </label>
-          <input id="photoInput" type="file" accept="image/*" capture="user" onChange={handlePhoto} style={{ display: 'none' }} />
+          )}
+
+          {avatarMode === 'bank' ? (
+            <div className="avatar-bank-scroll">
+              {AVATARS.map((src, i) => {
+                const taken = takenPhotos.has(src)
+                const selected = selectedAvatar === src
+                return (
+                  <button
+                    key={i}
+                    type="button"
+                    className={`avatar-tile ${selected ? 'selected' : ''} ${taken ? 'taken' : ''}`}
+                    onClick={() => !taken && selectAvatar(src)}
+                    disabled={taken}
+                    aria-label={`Avatar ${i + 1}`}
+                  >
+                    <img src={src} alt="" />
+                  </button>
+                )
+              })}
+            </div>
+          ) : (
+            <>
+              <label htmlFor="photoInput">
+                <div className={`photo-area ${photo ? 'has-photo' : ''}`}>
+                  {photo ? (
+                    <div className="photo-preview-wrap">
+                      <img src={photo} alt="preview" className="photo-preview" />
+                    </div>
+                  ) : (
+                    <>
+                      <div style={{ fontSize: 44 }}>🤳</div>
+                      <p>Clique pour prendre ou choisir une photo</p>
+                    </>
+                  )}
+                </div>
+              </label>
+              <input id="photoInput" type="file" accept="image/*" capture="user" onChange={handlePhoto} style={{ display: 'none' }} />
+            </>
+          )}
         </div>
 
-        <button className="btn btn-p" onClick={handleRegister} disabled={loading}>
+        <button className="btn btn-p" onClick={handleRegister} disabled={!canSubmit}>
           {loading ? '⏳ Inscription...' : '🕵️ REJOINDRE L\'OPÉRATION !'}
         </button>
 

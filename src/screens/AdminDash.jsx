@@ -7,11 +7,11 @@ import { showToast } from '../components/Toast'
 import Avatar from '../components/Avatar'
 import Modal from '../components/Modal'
 import { ROLES } from '../data/roles'
-import { TRIGGERS, GAGE_TYPES } from '../data/gages'
+import { GAGES, GAGE_TYPES } from '../data/gages'
 import { getGameTs, getRegTs, tsToLabel, localToTs } from '../utils/time'
 
 const MEDALS = ['🥇','🥈','🥉']
-const TYPE_ORDER = ['soft', 'physique', 'ose']
+const TYPE_ORDER = ['soft', 'med', 'hard', 'sexy']
 
 function tsToLocalInputs(ts) {
   if (!ts) return { date: '', time: '' }
@@ -37,6 +37,7 @@ export default function AdminDash() {
   const [confirmDeleteParty, setConfirmDeleteParty] = useState(false)
   const [editField, setEditField]       = useState(null)
   const [editValue, setEditValue]       = useState('')
+  const [expandedGages, setExpandedGages] = useState(() => new Set())
   // End-game scheduling
   const [endDate, setEndDate]           = useState('')
   const [endTime, setEndTime]           = useState('')
@@ -145,16 +146,38 @@ export default function AdminDash() {
   const toggleType = async (type) => {
     const current = new Set(party.enabledTypes || ['soft'])
     if (current.has(type) && current.size === 1) return
-    current.has(type) ? current.delete(type) : current.add(type)
+    const wasOn = current.has(type)
+    wasOn ? current.delete(type) : current.add(type)
+
+    const nextEnabledSet = new Set((party.enabledGages || []).filter(idx => {
+      const g = GAGES[idx]
+      return g && current.has(g.lvl)
+    }))
+
+    if (wasOn) {
+      GAGES.forEach((g, i) => { if (g.lvl === type) nextEnabledSet.delete(i) })
+    } else {
+      GAGES.forEach((g, i) => { if (g.lvl === type) nextEnabledSet.add(i) })
+    }
+
     await dbSet(`/parties/${partyId}/enabledTypes`, Array.from(current))
+    await dbSet(`/parties/${partyId}/enabledGages`, Array.from(nextEnabledSet))
     showToast('✅ Modifié !', 'var(--c)')
   }
 
-  const toggleTrigger = async (id) => {
-    const current = new Set(party.selectedTriggers || TRIGGERS.map(t => t.id))
-    current.has(id) ? current.delete(id) : current.add(id)
-    await dbSet(`/parties/${partyId}/selectedTriggers`, Array.from(current))
+  const toggleGage = async (idx) => {
+    const current = new Set(party.enabledGages || [])
+    current.has(idx) ? current.delete(idx) : current.add(idx)
+    await dbSet(`/parties/${partyId}/enabledGages`, Array.from(current))
     showToast('✅ Modifié !', 'var(--c)')
+  }
+
+  const toggleExpandedGage = (idx) => {
+    setExpandedGages(prev => {
+      const next = new Set(prev)
+      next.has(idx) ? next.delete(idx) : next.add(idx)
+      return next
+    })
   }
 
   const updateMissions = async (val) => {
@@ -338,7 +361,7 @@ export default function AdminDash() {
                     <div key={p.id} style={{ display:'flex', alignItems:'center', gap:10, padding:'7px 0', borderBottom:'1px solid var(--border)' }}>
                       <div style={{ width:24, textAlign:'center' }}>{MEDALS[i]||i+1}</div>
                       <div style={{ flex:1, fontWeight:800 }}>
-                        {p.name} <span style={{ color:'rgba(255,255,255,.4)', fontWeight:900, fontSize:12 }}>({(ROLES[p.roleIndex % ROLES.length] || ROLES[0]).n})</span>
+                        {(ROLES[p.roleIndex % ROLES.length] || ROLES[0]).n} <span style={{ color:'rgba(255,255,255,.4)', fontWeight:900, fontSize:12 }}>({p.name})</span>
                       </div>
                       <div style={{ fontFamily:'Bangers, cursive', fontSize:20, color:'var(--y)' }}>{p.score||0} pts</div>
                     </div>
@@ -352,7 +375,7 @@ export default function AdminDash() {
                   <div key={p.id} style={{ display:'flex', alignItems:'center', gap:10, padding:'7px 0', borderBottom:'1px solid var(--border)' }}>
                     <div style={{ width:24, textAlign:'center' }}>{MEDALS[i]||i+1}</div>
                     <div style={{ flex:1, fontWeight:800 }}>
-                      {p.name} <span style={{ color:'rgba(255,255,255,.4)', fontWeight:900, fontSize:12 }}>({(ROLES[p.roleIndex % ROLES.length] || ROLES[0]).n})</span>
+                      {(ROLES[p.roleIndex % ROLES.length] || ROLES[0]).n} <span style={{ color:'rgba(255,255,255,.4)', fontWeight:900, fontSize:12 }}>({p.name})</span>
                     </div>
                     <div style={{ fontFamily:'Bangers, cursive', fontSize:20, color:'var(--p)' }}>{p.caughtCount||0} ×</div>
                   </div>
@@ -563,7 +586,7 @@ export default function AdminDash() {
                 {TYPE_ORDER.map(type => {
                   const cfg = GAGE_TYPES[type]
                   const on  = (party.enabledTypes || ['soft']).includes(type)
-                  const rgb = type==='soft'?'57,255,20':type==='physique'?'0,245,255':'255,60,172'
+                  const rgb = type==='soft'?'57,255,20':type==='med'?'0,245,255':type==='hard'?'255,60,172':'255,106,213'
                   return (
                     <div key={type} onClick={() => toggleType(type)} style={{
                       display:'flex', alignItems:'center', gap:14, cursor:'pointer', borderRadius:16,
@@ -588,29 +611,86 @@ export default function AdminDash() {
               </div>
 
               <div style={{ fontSize:10, fontWeight:900, color:'var(--y)', letterSpacing:2, textTransform:'uppercase', marginBottom:10 }}>
-                Déclencheurs activés
+                Gages activés
               </div>
+              <div style={{ display:'flex', gap:8, marginBottom:10 }}>
+                <button
+                  className="btn btn-ghost btn-sm"
+                  style={{ flex:1 }}
+                  onClick={() => {
+                    const allowed = new Set(party.enabledTypes || ['soft'])
+                    const all = GAGES.map((g, i) => (allowed.has(g.lvl) ? i : null)).filter(v => v !== null)
+                    dbSet(`/parties/${partyId}/enabledGages`, all).then(() => showToast('✅ Modifié !', 'var(--c)'))
+                  }}
+                >✅ Tout</button>
+                <button
+                  className="btn btn-ghost btn-sm"
+                  style={{ flex:1 }}
+                  onClick={() => {
+                    dbSet(`/parties/${partyId}/enabledGages`, []).then(() => showToast('✅ Modifié !', 'var(--c)'))
+                  }}
+                >❌ Aucun</button>
+              </div>
+
               <div style={{ maxHeight:320, overflowY:'auto', display:'flex', flexDirection:'column', gap:8 }}>
-                {TRIGGERS.map(t => {
-                  const on = (party.selectedTriggers || TRIGGERS.map(x => x.id)).includes(t.id)
+                {GAGES.map((g, idx) => {
+                  const allowed = (party.enabledTypes || ['soft']).includes(g.lvl)
+                  if (!allowed) return null
+                  const on = (party.enabledGages || []).includes(idx)
+                  const expanded = expandedGages.has(idx)
+                  const long = (g.a || '').length > 90 || (g.i || '').length > 60
+                  const cfg = GAGE_TYPES[g.lvl]
+                  const rgb = g.lvl==='soft'?'57,255,20':g.lvl==='med'?'0,245,255':g.lvl==='hard'?'255,60,172':'255,106,213'
                   return (
-                    <div key={t.id} onClick={() => toggleTrigger(t.id)} className={`gage-pick-item ${on?'selected':''}`}>
+                    <div key={idx} onClick={() => toggleGage(idx)} className={`gage-pick-item ${on?'selected':''}`}>
                       <div className="gpi-check">{on?'✓':''}</div>
                       <div style={{ flex:1 }}>
-                        <div className="gpi-trg">{t.trigger}</div>
-                        <div style={{ display:'flex', gap:6, flexWrap:'wrap', marginTop:4 }}>
-                          {TYPE_ORDER
-                            .filter(type => (party.enabledTypes || ['soft']).includes(type) && t.gages[type])
-                            .map(type => (
-                              <span key={type} style={{
-                                fontSize:9, fontWeight:900, padding:'2px 6px', borderRadius:5,
-                                background:`rgba(${type==='soft'?'57,255,20':type==='physique'?'0,245,255':'255,60,172'},.15)`,
-                                color: GAGE_TYPES[type].color,
-                              }}>
-                                {GAGE_TYPES[type].emoji} {t.gages[type].a.slice(0,45)}…
-                              </span>
-                            ))}
+                        <div className="gpi-trg">{g.t}</div>
+                        <div style={{ marginTop:8 }}>
+                          <span style={{
+                            fontSize:9, fontWeight:900, padding:'2px 6px', borderRadius:5,
+                            background:`rgba(${rgb},.15)`,
+                            color: cfg.color,
+                          }}>
+                            {cfg.emoji} {cfg.label.toUpperCase()}
+                          </span>
                         </div>
+                        <div style={{
+                          fontSize:12,
+                          color:'rgba(255,255,255,.7)',
+                          lineHeight:1.35,
+                          marginTop:8,
+                          display: '-webkit-box',
+                          WebkitLineClamp: expanded ? 'unset' : 2,
+                          WebkitBoxOrient: 'vertical',
+                          overflow: 'hidden',
+                        }}>
+                          👉 {g.a}
+                        </div>
+                        {g.i && expanded && (
+                          <div style={{ marginTop:6, fontSize:11, color:'rgba(255,255,255,.45)', lineHeight:1.35 }}>
+                            💡 {g.i}
+                          </div>
+                        )}
+                        {long && (
+                          <button
+                            onClick={(e) => { e.stopPropagation(); toggleExpandedGage(idx) }}
+                            style={{
+                              marginTop:8,
+                              background:'rgba(255,255,255,.06)',
+                              border:'1px solid rgba(255,255,255,.10)',
+                              color:'rgba(255,255,255,.6)',
+                              borderRadius:10,
+                              padding:'6px 10px',
+                              fontSize:11,
+                              fontWeight:900,
+                              cursor:'pointer',
+                              width:'fit-content',
+                            }}
+                          >
+                            {expanded ? 'Réduire' : 'Voir plus'}
+                          </button>
+                        )}
                       </div>
                     </div>
                   )

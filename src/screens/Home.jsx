@@ -109,7 +109,7 @@ export default function Home() {
                 >▶ REJOINDRE</button>
                 <button
                   className="btn btn-ghost btn-sm"
-                  style={{ flex:1, padding:'12px 0', fontSize:12 }}
+                  style={{ flex:1.35, padding:'12px 0', fontSize:12, whiteSpace:'nowrap' }}
                   onClick={clearSession}
                 >⎋ Se déconnecter</button>
               </div>

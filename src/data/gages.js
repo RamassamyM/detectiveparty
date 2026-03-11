@@ -1,7 +1,8 @@
 export const GAGE_TYPES = {
-  soft:     { label: 'Fun & Soft',  emoji: '😄', color: '#39FF14', desc: 'Drôle et sans prise de tête — tout public' },
-  physique: { label: 'Physique',    emoji: '💪', color: '#00F5FF', desc: 'La victime se dépense — visible par tous !' },
-  ose:      { label: 'Osé',         emoji: '🔥', color: '#FF3CAC', desc: 'Aveux et situations gênantes — entre adultes complices' },
+  soft: { label: 'Soft', emoji: '😄', color: '#39FF14', desc: 'Drôle et sans prise de tête — tout public' },
+  med:  { label: 'Moyen', emoji: '�', color: '#00F5FF', desc: 'Un peu plus piquant — reste bon enfant' },
+  hard: { label: 'Hard', emoji: '🔥', color: '#FF3CAC', desc: 'Osé et potentiellement gênant — entre adultes complices' },
+  sexy: { label: 'Sexy', emoji: '💋', color: '#FF6AD5', desc: 'Flirt et tension légère — toujours consentie' },
 }
 
 export const GAGES = [
@@ -38,7 +39,7 @@ export const GAGES = [
   },
   {
     t: '💁 Quelqu\'un fait un compliment à quelqu\'un',
-    a: 'Surenchérir avec un compliment encore plus excessif.',
+    a: 'Refaire son compliment en mode "poète romantique du 19ème siècle" (20 secondes).',
     i: 'Les galants de la soirée !', lvl: 'soft',
   },
   {
@@ -68,7 +69,7 @@ export const GAGES = [
   },
   {
     t: '🎩 Quelqu\'un arrange ses cheveux ou sa tenue',
-    a: 'Le complimenter avec une tirade de 20 sec ultra-enthousiaste.',
+    a: 'Faire un défilé de mode improvisé (3 pas + pose) en commentant son propre style.',
     i: 'Les coquets de la soirée !', lvl: 'soft',
   },
   {
@@ -95,17 +96,17 @@ export const GAGES = [
   },
   {
     t: '💁 Quelqu\'un commence par "En tant que..."',
-    a: 'Mimer en silence ce que l\'autre vient de dire.',
+    a: 'Répéter sa phrase "En tant que..." en ajoutant 3 qualifications de plus en plus ridicules.',
     i: 'Les experts autoproclamés !', lvl: 'med',
   },
   {
     t: '🙄 Quelqu\'un dit "moi j\'aurais fait autrement"',
-    a: 'Donner un conseil de vie absurde mais ultra-convaincu.',
+    a: 'Donner un conseil de vie complètement absurde au détective (avec un ton ultra-sérieux, 15 secondes).',
     i: 'Les donneurs de leçons !', lvl: 'med',
   },
   {
     t: '🗺️ Quelqu\'un dit "quand j\'étais à l\'étranger"',
-    a: "3 questions de géo sur le pays. S'il se trompe, c'est son gage.",
+    a: "Répondre à 3 questions de géo sur le pays mentionné (posées par le détective).",
     i: 'Les globe-trotteurs !', lvl: 'med',
   },
   {
@@ -140,17 +141,17 @@ export const GAGES = [
   },
   {
     t: '😮 Quelqu\'un dit "c\'est fou"',
-    a: "Appeler quelqu'un de sa liste avec un surnom inventé par le groupe.",
+    a: "Appeler un contact au hasard et le saluer avec un surnom inventé sur le moment (appel en haut-parleur).",
     i: 'Les anecdoteurs passionnés !', lvl: 'med',
   },
   {
     t: '👀 Quelqu\'un regarde de haut en bas',
-    a: 'Faire un compliment exagérément enthousiaste sur sa tenue.',
+    a: 'Décrire sa propre tenue comme si c\'était une œuvre d\'art dans un musée (15 secondes).',
     i: 'La fashion police !', lvl: 'med',
   },
   {
     t: '🤌 Quelqu\'un gesticule excessivement',
-    a: 'Mimer exactement ses gestes en miroir pendant toute la conversation.',
+    a: 'Mimer exactement les gestes d\'une autre personne au choix en miroir pendant toute la conversation.',
     i: 'Les expressifs gestuels !', lvl: 'med',
   },
   {
@@ -177,7 +178,7 @@ export const GAGES = [
   },
   {
     t: '😈 Quelqu\'un dit "je suis sage maintenant"',
-    a: 'Le groupe choisit un gage parmi les 3 plus durs du deck.',
+    a: 'Raconter son pire moment "pas sage" de l\'année (30 secondes, détails interdits de censure).',
     i: 'Les soi-disant assagis !', lvl: 'hard',
   },
   {
@@ -187,7 +188,7 @@ export const GAGES = [
   },
   {
     t: '🙅 Quelqu\'un dit "j\'ai jamais fait ça"',
-    a: "Le groupe décide si c'est vrai. S'il ment, il doit avouer.",
+    a: "Avouer une chose qu'il a déjà faite mais qu'il prétendait ne jamais avoir faite.",
     i: 'Le jeu du jamais !', lvl: 'hard',
   },
   {
@@ -235,6 +236,48 @@ export const GAGES = [
     a: "Faire une imitation d'une célébrité choisie par le groupe pendant 1 min.",
     i: 'Les imitateurs du lot !', lvl: 'hard',
   },
+
+  // ────────────────── SEXY (8) ──────────────────
+  {
+    t: '💋 Quelqu\'un dit "c\'est sexy"',
+    a: 'Faire un compliment ultra-précis et élégant à une personne du groupe (sans toucher).',
+    i: 'Consentement et classe avant tout.', lvl: 'sexy',
+  },
+  {
+    t: '🌶️ Quelqu\'un dit "c\'est chaud"',
+    a: 'Regarder quelqu\'un dans les yeux 5 secondes et lui dire une phrase de film romantique (choisie par le groupe).',
+    i: 'Interdiction de rire (ou presque).', lvl: 'sexy',
+  },
+  {
+    t: '😏 Quelqu\'un dit "j\'avoue"',
+    a: 'Avouer un petit crush de célébrité (ou personnage fictif) et expliquer pourquoi en 20 secondes.',
+    i: 'Fictif accepté si ça gêne !', lvl: 'sexy',
+  },
+  {
+    t: '💄 Quelqu\'un se recoiffe devant un reflet',
+    a: 'Faire une démarche de mannequin sur 3 pas et une pose finale dramatique.',
+    i: 'Catwalk improvisé.', lvl: 'sexy',
+  },
+  {
+    t: '🫦 Quelqu\'un dit "trop mignon"',
+    a: 'Envoyer (à voix haute) un SMS de drague "très soft" à quelqu\'un : le groupe dicte, la victime peut refuser 1 mot.',
+    i: 'Toujours respectueux.', lvl: 'sexy',
+  },
+  {
+    t: '🕯️ Quelqu\'un dit "ambiance"',
+    a: 'Faire une mini pub "parfum" pour une personne du groupe (10 secondes, ton très dramatique).',
+    i: 'Voix grave recommandée.', lvl: 'sexy',
+  },
+  {
+    t: '🫶 Quelqu\'un fait un compliment à quelqu\'un',
+    a: 'Transformer son compliment en poème rimé (4 lignes minimum).',
+    i: 'Poésie instantanée.', lvl: 'sexy',
+  },
+  {
+    t: '🥂 Quelqu\'un trinque avec quelqu\'un',
+    a: 'Porter un toast ultra-romantique et cheesy en l\'honneur du détective (15 secondes).',
+    i: 'Plus c\'est cheesy, mieux c\'est.', lvl: 'sexy',
+  },
 ]
 
 export const TRIGGERS = GAGES.map((g, idx) => {
@@ -244,8 +287,9 @@ export const TRIGGERS = GAGES.map((g, idx) => {
     trigger: g.t,
     gages: {
       soft: gage,
-      physique: gage,
-      ose: gage,
+      med: gage,
+      hard: gage,
+      sexy: gage,
     },
   }
 })

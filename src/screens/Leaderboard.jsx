@@ -29,7 +29,7 @@ function Section({ title, color, players, scoreKey, scoreLabel }) {
             </div>
             <Avatar player={p} size={38} style={{ border:'2px solid rgba(255,255,255,.12)', borderRadius:'50%', flexShrink:0 }} />
             <div style={{ flex:1 }}>
-              <div style={{ fontWeight:800, fontSize:14 }}>{p.name} <span style={{ color:'rgba(255,255,255,.4)', fontWeight:900, fontSize:12 }}>({role.n})</span></div>
+              <div style={{ fontWeight:800, fontSize:14 }}>{role.n} <span style={{ color:'rgba(255,255,255,.4)', fontWeight:900, fontSize:12 }}>({p.name})</span></div>
               <div style={{ fontSize:11, color:'rgba(255,255,255,.4)' }}>
                 {score} {scoreLabel}
               </div>

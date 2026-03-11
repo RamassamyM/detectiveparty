@@ -7,7 +7,6 @@ import { ROLES, getLevel, getLevelProgress } from '../data/roles'
 import { GAGES, GAGE_TYPES } from '../data/gages'
 import { showToast } from '../components/Toast'
 import Avatar from '../components/Avatar'
-import Modal from '../components/Modal'
 import { getGameTs, tsToLabel } from '../utils/time'
 
 const MEDALS = ['🥇','🥈','🥉']
@@ -107,6 +106,14 @@ export default function Dashboard() {
   const [search, setSearch]               = useState('')
   const [searchOpen, setSearchOpen]       = useState(false)
 
+  const [showEditProfile, setShowEditProfile] = useState(false)
+  const [editName, setEditName] = useState('')
+  const [editYear, setEditYear] = useState('')
+  const [editPhoto, setEditPhoto] = useState(null)
+  const [editAvatarMode, setEditAvatarMode] = useState('bank')
+  const [editSelectedAvatar, setEditSelectedAvatar] = useState(null)
+  const [editNameSuggestion, setEditNameSuggestion] = useState('')
+
   const [showCustom, setShowCustom] = useState(false)
   const [cg1t, setCg1t] = useState(''); const [cg1a, setCg1a] = useState('')
   const [cg2t, setCg2t] = useState(''); const [cg2a, setCg2a] = useState('')
@@ -194,7 +201,7 @@ export default function Dashboard() {
       const idx = gageIndices[i]
       if (typeof idx === 'number') {
         const g = GAGES[idx]
-        if (g) res.push({ t: g.t, a: g.a, i: g.i })
+        if (g) res.push({ t: g.t, a: g.a, i: g.i, type: g.lvl })
       } else {
         const cg = customGages[ci]
         if (cg) res.push({ t: cg.t, a: cg.a, custom: true })
@@ -271,6 +278,90 @@ export default function Dashboard() {
     navigate('/')
   }
 
+  const AVATARS = Array.from({ length: 18 }, (_, i) => {
+    const n = String(i + 1).padStart(2, '0')
+    return `/avatars/${n}.png`
+  })
+
+  const compressPhoto = (file) => new Promise((resolve) => {
+    const reader = new FileReader()
+    reader.onload = (e) => {
+      const img = new Image()
+      img.onload = () => {
+        const canvas = document.createElement('canvas')
+        const out = 200
+        const s = Math.min(img.width, img.height)
+        canvas.width = out; canvas.height = out
+        const ctx = canvas.getContext('2d')
+        ctx.drawImage(img, (img.width - s) / 2, (img.height - s) / 2, s, s, 0, 0, out, out)
+        resolve(canvas.toDataURL('image/jpeg', 0.75))
+      }
+      img.src = e.target.result
+    }
+    reader.readAsDataURL(file)
+  })
+
+  const computeNameSuggestion = (baseName, players) => {
+    const base = (baseName || '').trim()
+    if (!base) return ''
+    const existingLower = new Set(
+      Object.values(players || {})
+        .map(p => (p?.name || '').trim().toLowerCase())
+        .filter(Boolean)
+    )
+    if (!existingLower.has(base.toLowerCase())) return ''
+    let i = 2
+    while (existingLower.has(`${base} ${i}`.toLowerCase())) i++
+    return `${base} ${i}`
+  }
+
+  const openEditProfile = () => {
+    setEditName(player?.name || '')
+    setEditYear(player?.year || '')
+    setEditPhoto(player?.photo || null)
+    setEditSelectedAvatar((player?.photo || '').startsWith('/avatars/') ? player.photo : null)
+    setEditAvatarMode((player?.photo || '').startsWith('/avatars/') ? 'bank' : 'upload')
+    setEditNameSuggestion('')
+    setShowEditProfile(true)
+  }
+
+  const handleEditPhoto = async (e) => {
+    const file = e.target.files[0]
+    if (!file) return
+    const compressed = await compressPhoto(file)
+    setEditPhoto(compressed)
+    setEditSelectedAvatar(null)
+  }
+
+  const selectEditAvatar = (src) => {
+    setEditSelectedAvatar(src)
+    setEditPhoto(src)
+  }
+
+  const saveProfile = async () => {
+    const trimmedName = editName.trim()
+    if (!trimmedName) { showToast('⚠️ Entre ton prénom !', '#FF6B00'); return }
+    if (!editYear || String(editYear).length !== 4) { showToast('⚠️ Entre ton année de naissance !', '#FF6B00'); return }
+    if (!editPhoto) { showToast('⚠️ Choisis un avatar ou ajoute une photo', '#FF6B00'); return }
+    const allPlayers = party?.players || {}
+    const existingLower = new Set(
+      Object.values(allPlayers)
+        .filter(p => p?.id !== playerId)
+        .map(p => (p?.name || '').trim().toLowerCase())
+        .filter(Boolean)
+    )
+    if (existingLower.has(trimmedName.toLowerCase())) {
+      const suggestion = computeNameSuggestion(trimmedName, allPlayers)
+      setEditNameSuggestion(suggestion)
+      showToast('⚠️ Prénom déjà pris : choisis-en un autre ou accepte la suggestion', '#FF6B00')
+      return
+    }
+    const updatedPlayer = { ...player, name: trimmedName, year: String(editYear), photo: editPhoto }
+    await dbSet(`/parties/${partyId}/players/${playerId}`, updatedPlayer)
+    showToast('✅ Profil mis à jour !', 'var(--c)')
+    setShowEditProfile(false)
+  }
+
   return (
     <div className="screen screen-bg-purple">
       <div className="bg-grid"/>
@@ -283,7 +374,6 @@ export default function Dashboard() {
             style={{ flexShrink:0 }}
             onClick={() => navigate('/')}
           >←</button>
-          <Avatar player={player} size={48} style={{ border:'3px solid var(--p)', borderRadius:'50%', flexShrink:0 }} />
           <div style={{ flex:1, minWidth:0 }}>
             <div style={{ fontFamily:'Bangers,cursive', fontSize:20, letterSpacing:1, overflow:'hidden', whiteSpace:'nowrap', textOverflow:'ellipsis' }}>
               {player.name}
@@ -292,6 +382,16 @@ export default function Dashboard() {
               {party.name}
             </div>
           </div>
+          <button
+            onClick={openEditProfile}
+            style={{
+              background:'rgba(0,245,255,.08)', border:'1px solid rgba(0,245,255,.18)',
+              color:'var(--c)', borderRadius:12, padding:'8px 10px',
+              fontSize:12, fontWeight:900, cursor:'pointer', flexShrink:0,
+            }}
+          >
+            ✎
+          </button>
           {/* Leaderboard button */}
           <button
             onClick={() => navigate(`/leaderboard/${partyId}`)}
@@ -320,7 +420,9 @@ export default function Dashboard() {
         {/* ── DETECTIVE CARD ── */}
         <div style={{ margin:'0 20px 16px' }}>
           <div className="det-card">
-            <div style={{ fontSize:56, marginBottom:4 }} className="float">{role.e}</div>
+            <div className="avatar-float" style={{ marginBottom:6, display:'inline-block' }}>
+              <Avatar player={player} size={86} style={{ border:'4px solid var(--p)', borderRadius:'50%' }} />
+            </div>
             <div style={{ fontFamily:'Bangers,cursive', fontSize:28, color:'var(--c)', letterSpacing:2, marginBottom:2 }}>
               {role.n.toUpperCase()}
             </div>
@@ -518,6 +620,103 @@ export default function Dashboard() {
           onConfirm={confirmUnmask}
           onCancel={() => setPendingTarget(null)}
         />
+      )}
+
+      {showEditProfile && (
+        <div className="modal-overlay" onClick={() => setShowEditProfile(false)}>
+          <div className="modal-box" onClick={e => e.stopPropagation()}>
+            <div className="modal-title">✏️ ÉDITER MON PROFIL</div>
+
+            <label className="form-label">Ton prénom</label>
+            <input className="form-input" value={editName} onChange={e => setEditName(e.target.value)} placeholder="Ex : Sofia" autoComplete="off" />
+            {editNameSuggestion && (
+              <div style={{ marginTop: 10, background: 'rgba(255,230,0,.06)', border: '1px solid rgba(255,230,0,.25)', borderRadius: 14, padding: '10px 12px' }}>
+                <div style={{ fontSize: 12, fontWeight: 900, color: 'rgba(255,230,0,.9)', letterSpacing: 1, marginBottom: 6 }}>
+                  Prénom déjà pris
+                </div>
+                <div style={{ fontSize: 12, color: 'rgba(255,255,255,.65)', lineHeight: 1.4, marginBottom: 10 }}>
+                  Suggestion disponible : <strong>{editNameSuggestion}</strong>
+                </div>
+                <button
+                  type="button"
+                  className="btn btn-y"
+                  style={{ width: '100%', padding: '12px 0', fontSize: 13, color: 'var(--dk)' }}
+                  onClick={() => { setEditName(editNameSuggestion); setEditNameSuggestion('') }}
+                >
+                  Utiliser "{editNameSuggestion}"
+                </button>
+              </div>
+            )}
+
+            <div style={{ height: 12 }} />
+
+            <label className="form-label">
+              Année de naissance
+              <span style={{ color: 'rgba(255,255,255,.28)', fontSize: 10, marginLeft: 6 }}>(code de reconnexion)</span>
+            </label>
+            <input className="form-input" type="number" value={editYear} onChange={e => setEditYear(e.target.value)} placeholder="Ex : 1995" min="1940" max="2010" />
+
+            <div style={{ height: 12 }} />
+
+            <label className="form-label">Avatar d'agent 🕵️</label>
+            <div className="avatar-mode">
+              <button
+                type="button"
+                className={`avatar-mode-btn ${editAvatarMode === 'bank' ? 'active' : ''}`}
+                onClick={() => setEditAvatarMode('bank')}
+              >🎭 Choisir</button>
+              <button
+                type="button"
+                className={`avatar-mode-btn ${editAvatarMode === 'upload' ? 'active' : ''}`}
+                onClick={() => setEditAvatarMode('upload')}
+              >📸 Uploader</button>
+            </div>
+
+            {editAvatarMode === 'bank' ? (
+              <div className="avatar-bank-scroll">
+                {AVATARS.map((src, i) => {
+                  const taken = Object.values(party?.players || {}).some(p => p?.id !== playerId && p?.photo === src)
+                  const selected = editSelectedAvatar === src
+                  return (
+                    <button
+                      key={i}
+                      type="button"
+                      className={`avatar-tile ${selected ? 'selected' : ''} ${taken ? 'taken' : ''}`}
+                      onClick={() => !taken && selectEditAvatar(src)}
+                      disabled={taken}
+                      aria-label={`Avatar ${i + 1}`}
+                    >
+                      <img src={src} alt="" />
+                    </button>
+                  )
+                })}
+              </div>
+            ) : (
+              <>
+                <label htmlFor="profilePhotoInput">
+                  <div className={`photo-area ${editPhoto ? 'has-photo' : ''}`}>
+                    {editPhoto ? (
+                      <div className="photo-preview-wrap">
+                        <img src={editPhoto} alt="preview" className="photo-preview" />
+                      </div>
+                    ) : (
+                      <>
+                        <div style={{ fontSize: 44 }}>🤳</div>
+                        <p>Clique pour prendre ou choisir une photo</p>
+                      </>
+                    )}
+                  </div>
+                </label>
+                <input id="profilePhotoInput" type="file" accept="image/*" capture="user" onChange={handleEditPhoto} style={{ display: 'none' }} />
+              </>
+            )}
+
+            <div style={{ display:'flex', gap:10, marginTop: 14 }}>
+              <button className="btn btn-ghost" style={{ flex: 1 }} onClick={() => setShowEditProfile(false)}>Annuler</button>
+              <button className="btn btn-g" style={{ flex: 2, color:'var(--dk)' }} onClick={saveProfile}>✅ Enregistrer</button>
+            </div>
+          </div>
+        </div>
       )}
     </div>
   )
