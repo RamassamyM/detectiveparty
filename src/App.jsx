@@ -1,35 +1,36 @@
-import { useState } from 'react'
-import reactLogo from './assets/react.svg'
-import viteLogo from '/vite.svg'
-import './App.css'
+import { BrowserRouter, Routes, Route, Navigate } from 'react-router-dom'
+import Toast from './components/Toast'
 
-function App() {
-  const [count, setCount] = useState(0)
+import Home            from './screens/Home'
+import AdminLogin      from './screens/AdminLogin'
+import AdminParties    from './screens/AdminParties'
+import AdminCreate     from './screens/AdminCreate'
+import AdminDash       from './screens/AdminDash'
+import PartyPage       from './screens/PartyPage'
+import Register        from './screens/Register'
+import Login           from './screens/Login'
+import Dashboard       from './screens/Dashboard'
+import LeaderboardPage from './screens/Leaderboard'
+import Podium          from './screens/Podium'
 
+export default function App() {
   return (
-    <>
-      <div>
-        <a href="https://vite.dev" target="_blank">
-          <img src={viteLogo} className="logo" alt="Vite logo" />
-        </a>
-        <a href="https://react.dev" target="_blank">
-          <img src={reactLogo} className="logo react" alt="React logo" />
-        </a>
-      </div>
-      <h1>Vite + React</h1>
-      <div className="card">
-        <button onClick={() => setCount((count) => count + 1)}>
-          count is {count}
-        </button>
-        <p>
-          Edit <code>src/App.jsx</code> and save to test HMR
-        </p>
-      </div>
-      <p className="read-the-docs">
-        Click on the Vite and React logos to learn more
-      </p>
-    </>
+    <BrowserRouter>
+      <Routes>
+        <Route path="/"                               element={<Home />} />
+        <Route path="/admin/login"                    element={<AdminLogin />} />
+        <Route path="/admin/parties"                  element={<AdminParties />} />
+        <Route path="/admin/create"                   element={<AdminCreate />} />
+        <Route path="/admin/dash/:partyId"            element={<AdminDash />} />
+        <Route path="/party/:partyId"                 element={<PartyPage />} />
+        <Route path="/party/:partyId/register"        element={<Register />} />
+        <Route path="/party/:partyId/login"           element={<Login />} />
+        <Route path="/dashboard/:partyId/:playerId"   element={<Dashboard />} />
+        <Route path="/leaderboard/:partyId"           element={<LeaderboardPage />} />
+        <Route path="/podium/:partyId"                element={<Podium />} />
+        <Route path="*"                               element={<Navigate to="/" />} />
+      </Routes>
+      <Toast />
+    </BrowserRouter>
   )
 }
-
-export default App

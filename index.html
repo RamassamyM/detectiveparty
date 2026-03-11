@@ -1,13 +1,40 @@
-<!doctype html>
-<html lang="en">
+<!DOCTYPE html>
+<html lang="fr">
   <head>
     <meta charset="UTF-8" />
-    <link rel="icon" type="image/svg+xml" href="/vite.svg" />
-    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <title>detective-party</title>
+    <link rel="icon" type="image/svg+xml" data-react-helmet="true" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>🕵️</text></svg>" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0" />
+    <title>🕵️ Détective Party</title>
+    <link href="https://fonts.googleapis.com/css2?family=Bangers&family=Nunito:wght@400;700;800;900&display=swap" rel="stylesheet" />
   </head>
   <body>
     <div id="root"></div>
+    <script>
+      console.log('[dp] index.html loaded')
+      const el = document.getElementById('root')
+      if (el && !el.childNodes.length) el.textContent = '[dp] booting…'
+
+      window.addEventListener('error', (ev) => {
+        console.error('[dp] window.error', ev.error || ev.message)
+        if (!el) return
+        const msg = ev?.error?.stack || ev?.error?.message || ev?.message || String(ev)
+        el.innerHTML = `<pre style="white-space:pre-wrap;padding:16px;color:#fff;background:#111;border:1px solid rgba(255,255,255,.15);border-radius:12px;font-family:ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, 'Liberation Mono', 'Courier New', monospace;">[window.error]\n${msg}</pre>`
+      })
+
+      window.addEventListener('unhandledrejection', (ev) => {
+        console.error('[dp] unhandledrejection', ev.reason)
+        if (!el) return
+        const msg = ev?.reason?.stack || ev?.reason?.message || String(ev.reason)
+        el.innerHTML = `<pre style="white-space:pre-wrap;padding:16px;color:#fff;background:#111;border:1px solid rgba(255,255,255,.15);border-radius:12px;font-family:ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, 'Liberation Mono', 'Courier New', monospace;">[unhandledrejection]\n${msg}</pre>`
+      })
+
+      setTimeout(() => {
+        if (!el) return
+        if (el.textContent === '[dp] booting…') {
+          el.innerHTML = `<pre style="white-space:pre-wrap;padding:16px;color:#fff;background:#111;border:1px solid rgba(255,255,255,.15);border-radius:12px;font-family:ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, 'Liberation Mono', 'Courier New', monospace;">[dp] React did not mount.\nCheck Network for /src/main.jsx and console for module load errors.</pre>`
+        }
+      }, 1200)
+    </script>
     <script type="module" src="/src/main.jsx"></script>
   </body>
 </html>
