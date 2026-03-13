@@ -28,8 +28,7 @@ export default function Login() {
     )
     if (!player) { showToast('❌ Prénom ou année incorrecte !', '#FF3CAC'); return }
 
-    if (party.ended) navigate(`/podium/${partyId}`)
-    else navigate(`/dashboard/${partyId}/${player.id}`)
+    navigate(`/dashboard/${partyId}/${player.id}`)
   }
 
   return (

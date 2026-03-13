@@ -43,9 +43,19 @@ export function getLevelProgress(score) {
   const s = score || 0
   const current = getLevel(s)
   const next = LEVELS[current.index + 1]
-  if (!next) return { pct: 100, nextLabel: 'MAX !' }
-  const pct = Math.round(((s - current.min) / (next.min - current.min)) * 100)
-  return { pct, nextLabel: `→ ${next.e} ${next.lbl} à ${next.min} pts` }
+  
+  // Progression totale depuis STAGIAIRE (0) jusqu'à LÉGENDE VIVANTE (10)
+  const totalMaxScore = 10 // LÉGENDE VIVANTE commence à 10 points
+  const totalProgress = Math.min((s / totalMaxScore) * 100, 100)
+  
+  // Prochain niveau pour le label
+  let nextLabel = 'MAX !'
+  if (next) {
+    nextLabel = `→ ${next.e} ${next.lbl} à ${next.min} pts`
+  }
+  
+    
+  return { pct: totalProgress, nextLabel }
 }
 
 export const GAME_IMAGES = [

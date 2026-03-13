@@ -11,9 +11,6 @@
     <div id="root"></div>
     <script>
       console.log('[dp] index.html loaded')
-      const el = document.getElementById('root')
-      if (el && !el.childNodes.length) el.textContent = '[dp] booting…'
-
       window.addEventListener('error', (ev) => {
         console.error('[dp] window.error', ev.error || ev.message)
         if (!el) return
@@ -27,13 +24,6 @@
         const msg = ev?.reason?.stack || ev?.reason?.message || String(ev.reason)
         el.innerHTML = `<pre style="white-space:pre-wrap;padding:16px;color:#fff;background:#111;border:1px solid rgba(255,255,255,.15);border-radius:12px;font-family:ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, 'Liberation Mono', 'Courier New', monospace;">[unhandledrejection]\n${msg}</pre>`
       })
-
-      setTimeout(() => {
-        if (!el) return
-        if (el.textContent === '[dp] booting…') {
-          el.innerHTML = `<pre style="white-space:pre-wrap;padding:16px;color:#fff;background:#111;border:1px solid rgba(255,255,255,.15);border-radius:12px;font-family:ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, 'Liberation Mono', 'Courier New', monospace;">[dp] React did not mount.\nCheck Network for /src/main.jsx and console for module load errors.</pre>`
-        }
-      }, 1200)
     </script>
     <script type="module" src="/src/main.jsx"></script>
   </body>

@@ -10,6 +10,7 @@ import PartyPage       from './screens/PartyPage'
 import Register        from './screens/Register'
 import Login           from './screens/Login'
 import Dashboard       from './screens/Dashboard'
+import GageHistory     from './screens/GageHistory'
 import LeaderboardPage from './screens/Leaderboard'
 import Podium          from './screens/Podium'
 
@@ -26,6 +27,7 @@ export default function App() {
         <Route path="/party/:partyId/register"        element={<Register />} />
         <Route path="/party/:partyId/login"           element={<Login />} />
         <Route path="/dashboard/:partyId/:playerId"   element={<Dashboard />} />
+        <Route path="/gages/:partyId/:playerId"        element={<GageHistory />} />
         <Route path="/leaderboard/:partyId"           element={<LeaderboardPage />} />
         <Route path="/podium/:partyId"                element={<Podium />} />
         <Route path="*"                               element={<Navigate to="/" />} />

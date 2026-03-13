@@ -42,6 +42,20 @@ export default function AdminDash() {
   const [endDate, setEndDate]           = useState('')
   const [endTime, setEndTime]           = useState('')
 
+  // End game immediately
+  const endGameImmediately = async () => {
+    if (!party) return
+    
+    try {
+      await dbSet(`/parties/${partyId}/ended`, true)
+      await dbSet(`/parties/${partyId}/endedAt`, Date.now())
+      await dbSet(`/parties/${partyId}/endTs`, Date.now())
+      showToast('🏁 Le jeu a été terminé immédiatement !', 'var(--y)')
+    } catch (error) {
+      showToast('❌ Erreur lors de la fin du jeu', '#FF3CAC')
+    }
+  }
+
   const [regStartDate, setRegStartDate] = useState('')
   const [regStartTime, setRegStartTime] = useState('')
   const [regEndDate, setRegEndDate]     = useState('')
@@ -319,6 +333,27 @@ export default function AdminDash() {
                   <span style={{ color:'rgba(255,255,255,.45)' }}>⏰ Fin programmée : </span>
                   <strong style={{ color:'var(--y)' }}>{tsToLabel(party.endTs)}</strong>
                 </div>
+              )}
+              {!party.ended && getGameTs(party) && Date.now() >= getGameTs(party) && (
+                <button
+                  onClick={endGameImmediately}
+                  style={{
+                    width:'100%', marginTop:12, background:'rgba(255,60,172,.08)',
+                    border:'1px solid rgba(255,60,172,.18)', color:'var(--p)',
+                    borderRadius:10, padding:'8px 0', fontSize:12, fontWeight:900,
+                    cursor:'pointer', letterSpacing:1, transition:'all .2s',
+                  }}
+                  onMouseOver={(e) => {
+                    e.target.style.background='rgba(255,60,172,.15)'
+                    e.target.style.borderColor='rgba(255,60,172,.3)'
+                  }}
+                  onMouseOut={(e) => {
+                    e.target.style.background='rgba(255,60,172,.08)'
+                    e.target.style.borderColor='rgba(255,60,172,.18)'
+                  }}
+                >
+                  🏁 TERMINER LE JEU IMMÉDIATEMENT
+                </button>
               )}
             </div>
 

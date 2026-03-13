@@ -7,6 +7,7 @@ import { ROLES, getLevel, getLevelProgress } from '../data/roles'
 import { GAGES, GAGE_TYPES } from '../data/gages'
 import { showToast } from '../components/Toast'
 import Avatar from '../components/Avatar'
+import { useNotifications, showNotification, Notification, createNotificationForPlayers } from '../components/NotificationSystem'
 import { getGameTs, tsToLabel } from '../utils/time'
 
 const MEDALS = ['🥇','🥈','🥉']
@@ -36,8 +37,8 @@ function GagePickerModal({ target, gages, onConfirm, onCancel }) {
     <div className="modal-overlay" onClick={onCancel}>
       <div className="modal-box" onClick={e => e.stopPropagation()}>
         <div className="modal-title">🎯 DÉMASQUER {target.name.toUpperCase()}</div>
-        <div className="modal-subtitle">
-          Quel gage as-tu déclenché ?
+        <div className="modal-subtitle" style={{ margin: '1rem 0' }}>
+          Coupable.... mais de quoi ?
         </div>
         <div style={{ display:'flex', flexDirection:'column', gap:10, marginBottom:18, maxHeight:'55vh', overflowY:'auto' }}>
           {gages.map((g, i) => {
@@ -62,7 +63,7 @@ function GagePickerModal({ target, gages, onConfirm, onCancel }) {
                     {typeCfg.emoji} {typeCfg.label.toUpperCase()}
                   </span>
                 )}
-                <div style={{ fontSize:11, color:'rgba(255,255,255,.5)', marginBottom:4, lineHeight:1.4 }}>
+                <div style={{ fontSize:14, color:'rgba(255,255,255,.7)', marginBottom:4, lineHeight:1.4 }}>
                   ⚡ {g.trigger || g.t}
                 </div>
                 <div style={{ fontSize:12, fontWeight:700, lineHeight:1.4 }}>
@@ -97,6 +98,11 @@ export default function Dashboard() {
   const navigate = useNavigate()
   const party = useParty(partyId)
   const user = useAuth()
+  
+  const partyEnded = Boolean(party?.ended)
+  const player = party?.players?.[playerId]
+  
+  const { notifications, removeNotification } = useNotifications(playerId, player?.notifications || [])
 
   if (import.meta?.env?.DEV) {
     window.__dp_dbg = window.__dp_dbg || { seen: new Set() }
@@ -132,14 +138,7 @@ export default function Dashboard() {
     })()
   }, [user])
 
-  useEffect(() => {
-    if (!party) return
-    if (party.ended) navigate(`/podium/${partyId}`)
-  }, [party, partyId, navigate])
-
-  const partyEnded = Boolean(party?.ended)
-  const player = party?.players?.[playerId]
-
+  
   useEffect(() => {
     if (!import.meta?.env?.DEV) return
     const key = `dash:${partyId}:${playerId}:${Boolean(party)}:${Boolean(player)}`
@@ -165,7 +164,7 @@ export default function Dashboard() {
     setCg2a(cg[1]?.a || '')
   }, [player?.customGages, showCustom, player])
 
-  if (!party || partyEnded) return (
+  if (!party) return (
     <div className="screen screen-bg-purple">
       <div className="bg-grid"/>
       <div className="page-content" style={{ alignItems:'center', justifyContent:'center' }}>
@@ -250,15 +249,32 @@ export default function Dashboard() {
 
   const confirmUnmask = async (gageIdx) => {
     if (!pendingTarget) return
+    
+    const selectedGage = gages[gageIdx]
+    
+    // Créer les notifications pour les deux joueurs
+    const notificationData = createNotificationForPlayers(player, pendingTarget, selectedGage)
+    
+    const updatedTarget = {
+      ...pendingTarget,
+      caughtCount: (pendingTarget.caughtCount || 0) + 1,
+      receivedGages: [...(pendingTarget.receivedGages || []), {
+        from: player.name,
+        fromId: playerId,
+        gage: selectedGage,
+        at: Date.now(),
+        done: false
+      }],
+      notifications: [...(pendingTarget.notifications || []), notificationData.target]
+    }
+    
     const updatedPlayer = {
       ...player,
       unmaskedIds: [...(player.unmaskedIds || []), pendingTarget.id],
       score: (player.score || 0) + 1,
+      notifications: [...(player.notifications || []), notificationData.detective]
     }
-    const updatedTarget = {
-      ...pendingTarget,
-      caughtCount: (pendingTarget.caughtCount || 0) + 1,
-    }
+    
     const prevLevel = getLevel(player.score || 0)
     const newLevel  = getLevel(updatedPlayer.score)
     await dbSet(`/parties/${partyId}/players/${playerId}`, updatedPlayer)
@@ -374,7 +390,7 @@ export default function Dashboard() {
             style={{ flexShrink:0 }}
             onClick={() => navigate('/')}
           >←</button>
-          <div style={{ flex:1, minWidth:0 }}>
+          <div>
             <div style={{ fontFamily:'Bangers,cursive', fontSize:20, letterSpacing:1, overflow:'hidden', whiteSpace:'nowrap', textOverflow:'ellipsis' }}>
               {player.name}
             </div>
@@ -392,6 +408,7 @@ export default function Dashboard() {
           >
             ✎
           </button>
+          <div style={{ flex:1, minWidth:0 }}></div>
           {/* Leaderboard button */}
           <button
             onClick={() => navigate(`/leaderboard/${partyId}`)}
@@ -405,6 +422,7 @@ export default function Dashboard() {
             🏆 <span style={{ fontSize:11 }}>Top</span>
           </button>
 
+          
           <button
             onClick={handlePlayerLogout}
             style={{
@@ -416,6 +434,31 @@ export default function Dashboard() {
             Quitter
           </button>
         </div>
+
+        {/* ── MESSAGE JEU TERMINÉ ── */}
+        {partyEnded && (
+          <div style={{ margin:'0 20px 16px' }}>
+            <div style={{
+              background:'rgba(255,60,172,.08)', border:'1px solid rgba(255,60,172,.18)',
+              borderRadius:16, padding:'16px', textAlign:'center'
+            }}>
+              <div style={{ fontSize:32, marginBottom:8 }}>🏁</div>
+              <div style={{ fontSize:16, fontWeight:700, color:'var(--p)', marginBottom:4 }}>
+                Le jeu est terminé !
+              </div>
+              <div style={{ fontSize:12, color:'rgba(255,255,255,.45)' }}>
+                Consulte le podium pour voir les résultats
+              </div>
+            </div>
+            <button 
+              className="btn btn-y" 
+              style={{ width:'100%', marginTop:12 }}
+              onClick={() => navigate(`/podium/${partyId}`)}
+            >
+              🏆 VOIR LE PODIUM
+            </button>
+          </div>
+        )}
 
         {/* ── DETECTIVE CARD ── */}
         <div style={{ margin:'0 20px 16px' }}>
@@ -433,17 +476,29 @@ export default function Dashboard() {
                 {level.e} {level.lbl}
               </span>
               <div className="level-bar-wrap">
-                <div className="level-bar-fill" style={{ width:`${pct}%` }}/>
+                <div className="level-bar-fill" style={{ width:`${pct}%`, position:'relative', overflow:'hidden' }}>
+                  <div className="level-bar-shine" />
+                </div>
               </div>
-              <span style={{ fontSize:10, color:'rgba(255,255,255,.35)', whiteSpace:'nowrap' }}>{nextLabel}</span>
+              <span style={{ fontSize:10, color:'rgba(255,255,255,.7)', whiteSpace:'nowrap' }}>{nextLabel}</span>
             </div>
-            <div style={{ display:'flex', gap:8, justifyContent:'center', flexWrap:'wrap' }}>
+            <div style={{ display:'flex', gap:8, justifyContent:'center', flexWrap:'wrap', alignItems:'center' }}>
               <div style={{ background:'rgba(0,0,0,.35)', borderRadius:10, padding:'5px 12px', fontSize:12, fontWeight:700 }}>
                 🏅 {player.score||0} démasqués
               </div>
               <div style={{ background:'rgba(0,0,0,.35)', borderRadius:10, padding:'5px 12px', fontSize:12, fontWeight:700 }}>
                 💀 {player.caughtCount||0} fois pris
               </div>
+              <button
+                onClick={() => navigate(`/gages/${partyId}/${playerId}`)}
+                style={{
+                  background:'rgba(255,255,255,.06)', border:'1px solid rgba(255,255,255,.12)',
+                  color:'rgba(255,255,255,.55)', borderRadius:10, padding:'5px 10px',
+                  fontSize:10, fontWeight:900, cursor:'pointer',
+                }}
+              >
+                📋 VOIR LES GAGES
+              </button>
             </div>
           </div>
         </div>
@@ -470,10 +525,213 @@ export default function Dashboard() {
           </div>
         </div>
 
+        {/* ── MES GAGES À FAIRE ── */}
+        {player.receivedGages && player.receivedGages.length > 0 && (
+          <div style={{ margin:'0 20px 16px' }}>
+            <div className="section-title">🎭 MES GAGES ({player.receivedGages.length})</div>
+            {(() => {
+              const undoneGages = player.receivedGages.filter(g => !g.done)
+              
+              if (undoneGages.length === 0) {
+                return (
+                  <>
+                    <div style={{
+                      background:'rgba(57,255,20,.08)', border:'1px solid rgba(57,255,20,.18)',
+                      borderRadius:12, padding:'20px 16px', marginBottom:12, textAlign:'center'
+                    }}>
+                      <div style={{ fontSize:48, marginBottom:12 }}>🎉</div>
+                      <div style={{ fontSize:16, fontWeight:700, color:'var(--g)', marginBottom:4 }}>
+                        Aucun gage à faire !
+                      </div>
+                      <div style={{ fontSize:12, color:'rgba(255,255,255,.45)' }}>
+                        Bravo ! Tu as accompli tous tes gages
+                      </div>
+                    </div>
+                    <button
+                      onClick={() => navigate(`/gages/${partyId}/${playerId}`)}
+                      style={{
+                        width:'100%', background:'rgba(0,245,255,.04)', border:'1px solid rgba(0,245,255,.12)',
+                        color:'var(--c)', borderRadius:12, padding:'10px 16px', fontSize:12,
+                        fontWeight:900, cursor:'pointer', letterSpacing:1, textAlign:'center',
+                      }}
+                    >
+                      📊 VOIR TOUS LES GAGES DÉJÀ FAITS
+                    </button>
+                  </>
+                )
+              }
+              
+              const displayGage = undoneGages[0] // Premier gage non fait (le plus récent)
+              const isUndone = !displayGage.done
+              
+              return (
+                <>
+                  <div style={{
+                    background: isUndone ? 'rgba(255,60,172,.08)' : 'rgba(57,255,20,.08)',
+                    border: isUndone ? '1px solid rgba(255,60,172,.18)' : '1px solid rgba(57,255,20,.18)',
+                    borderRadius:12, padding:'14px 16px', marginBottom:12,
+                  }}>
+                  <div style={{ display:'flex', justifyContent:'space-between', alignItems:'flex-start', marginBottom:8 }}>
+                    <div style={{ fontSize:11, color: isUndone ? 'var(--p)' : 'var(--g)', fontWeight:900 }}>
+                      🎭 Par @{displayGage.from}
+                    </div>
+                    {isUndone && !partyEnded && (
+                      <button
+                        onClick={async () => {
+                          const updatedReceivedGages = player.receivedGages.map((g, idx) => 
+                            idx === player.receivedGages.indexOf(displayGage) ? { ...g, done: true } : g
+                          )
+                          await dbSet(`/parties/${partyId}/players/${playerId}`, {
+                            ...player,
+                            receivedGages: updatedReceivedGages
+                          })
+                          showToast('✅ Gage marqué comme fait !', 'var(--g)')
+                        }}
+                        style={{
+                          background: 'rgba(255,60,172,.15)',
+                          border: '1px solid rgba(255,60,172,.3)',
+                          color: 'var(--p)',
+                          borderRadius:6, padding:'4px 8px',
+                          fontSize:10, fontWeight:900, cursor:'pointer',
+                        }}
+                      >
+                        '⏳ EN ATTENTE
+                      </button>
+                    )}
+                    {isUndone && partyEnded && (
+                      <div style={{
+                        padding: '4px 8px',
+                        borderRadius: 6,
+                        fontSize: 10,
+                        fontWeight: 900,
+                        background: 'rgba(255,255,255,.1)',
+                        color: 'rgba(255,255,255,.5)'
+                      }}>
+                        ⏳ EN ATTENTE
+                      </div>
+                    )}
+                    {!isUndone && (
+                      <div style={{
+                        padding: '4px 8px',
+                        borderRadius: 6,
+                        fontSize: 10,
+                        fontWeight: 900,
+                        background: 'rgba(57,255,20,.15)',
+                        color: 'var(--g)'
+                      }}>
+                        ✅ DÉJÀ FAIT
+                      </div>
+                    )}
+                  </div>
+                  <div style={{ fontSize:11, color:'rgba(255,255,255,.5)', marginBottom:4, lineHeight:1.4 }}>
+                    ⚡ {displayGage.gage.trigger || displayGage.gage.t}
+                  </div>
+                  <div style={{ fontSize:12, fontWeight:700, lineHeight:1.4, color:'rgba(255,255,255,.9)' }}>
+                    👉 {displayGage.gage.a}
+                  </div>
+                  </div>
+                  <button
+                    onClick={() => navigate(`/gages/${partyId}/${playerId}`)}
+                    style={{
+                      width:'100%', background:'rgba(0,245,255,.04)', border:'1px solid rgba(0,245,255,.12)',
+                      color:'var(--c)', borderRadius:12, padding:'10px 16px', fontSize:12,
+                      fontWeight:900, cursor:'pointer', letterSpacing:1, textAlign:'center',
+                    }}
+                  >
+                    📊 VOIR TOUS LES GAGES A FAIRE
+                  </button>
+                </>
+              )
+            })()}
+          </div>
+        )}
+
+        {/* ── GAGES À VALIDER (détective) ── */}
+        {(() => {
+          const sentGages = []
+          Object.values(party?.players || {}).forEach(otherPlayer => {
+            if (otherPlayer.id !== playerId) {
+              const otherReceivedGages = otherPlayer.receivedGages || []
+              otherReceivedGages.forEach(gage => {
+                if (gage.fromId === playerId && !gage.done) {
+                  sentGages.push({
+                    ...gage,
+                    to: otherPlayer
+                  })
+                }
+              })
+            }
+          })
+
+          return sentGages.length > 0 && (
+            <div style={{ margin:'0 20px 16px' }}>
+              <div className="section-title">🎯 GAGES À VALIDER ({sentGages.length})</div>
+              {(() => {
+                const lastSentGage = sentGages[0]
+                return (
+                  <div style={{
+                    background:'rgba(0,245,255,.08)', border:'1px solid rgba(0,245,255,.18)',
+                    borderRadius:12, padding:'14px 16px', marginBottom:12,
+                  }}>
+                    <div style={{ display:'flex', justifyContent:'space-between', alignItems:'flex-start', marginBottom:8 }}>
+                      <div style={{ fontSize:11, color:'var(--c)', fontWeight:900 }}>
+                        🎯 À @{lastSentGage.to?.name || 'Joueur'}
+                      </div>
+                      <button
+                        onClick={() => navigate(`/gages/${partyId}/${playerId}`)}
+                        style={{
+                          background:'rgba(0,245,255,.15)', border:'1px solid rgba(0,245,255,.3)',
+                          color:'var(--c)', borderRadius:6, padding:'4px 8px',
+                          fontSize:10, fontWeight:900, cursor:'pointer',
+                        }}
+                      >
+                        📋 VALIDER
+                      </button>
+                    </div>
+                    <div style={{ fontSize:11, color:'rgba(255,255,255,.5)', marginBottom:4, lineHeight:1.4 }}>
+                      ⚡ {lastSentGage.gage?.trigger || lastSentGage.gage?.t}
+                    </div>
+                    <div style={{ fontSize:12, fontWeight:700, lineHeight:1.4, color:'rgba(255,255,255,.9)' }}>
+                      👉 {lastSentGage.gage?.a}
+                    </div>
+                  </div>
+                )
+              })()}
+              {sentGages.length > 1 && (
+                <button
+                  onClick={() => navigate(`/gages/${partyId}/${playerId}`)}
+                  style={{
+                    width:'100%', background:'rgba(0,245,255,.04)', border:'1px solid rgba(0,245,255,.12)',
+                    color:'var(--c)', borderRadius:12, padding:'10px 16px', fontSize:12,
+                    fontWeight:900, cursor:'pointer', letterSpacing:1, textAlign:'center',
+                  }}
+                >
+                  📋 VOIR TOUS LES GAGES À VALIDER
+                </button>
+              )}
+            </div>
+          )
+        })()}
+
         {/* ── GAGES ── */}
         <div style={{ margin:'0 20px 16px' }}>
-          <div className="section-title">🎭 TES GAGES SECRETS</div>
-          {gages.map((g, i) => {
+          <div style={{ display:'flex', justifyContent:'space-between', alignItems:'center', marginBottom:12 }}>
+            <div className="section-title" style={{ opacity: partyEnded ? 0.5 : 1 }}>🎭 TES MISSIONS DE DETECTIVE</div>
+            {party.allowCustomGages && !partyEnded && (
+              <button
+                onClick={() => setShowCustom(v => !v)}
+                style={{
+                  background:'rgba(255,255,255,.06)', border:'1px solid rgba(255,255,255,.12)',
+                  color:'rgba(255,255,255,.55)', borderRadius:8, padding:'6px 10px',
+                  fontSize:14, fontStyle: 'italic', fontWeight:500, cursor:'pointer', display:'flex', alignItems:'center', gap:6,
+                }}
+              >
+                ✏️ Modifier les gages
+                <span style={{ fontSize: 12, transition: 'transform .2s', transform: showCustom ? 'rotate(180deg)' : 'none' }}>▼</span>
+              </button>
+            )}
+          </div>
+          {!showCustom && gages.map((g, i) => {
             const typeCfg = g.type ? GAGE_TYPES[g.type] : null
             const k = `${i}-${g.custom ? 'c' : 'a'}-${g.t || ''}-${g.a || ''}`
             return (
@@ -490,124 +748,107 @@ export default function Dashboard() {
                     {g.custom && <span className="gage-custom-badge">PERSO</span>}
                   </div>
                 )}
-                <div className="gage-trigger">⚡ QUAND : {g.trigger || g.t}</div>
-                <div className="gage-action">👉 {g.a}</div>
+                <div>
+                  <span style={{ fontFamily:'Bangers, cursive', fontSize:12, letterSpacing:1.5, color:'var(--c)', marginBottom:5 }}>⚡ TROUVE LE COUPABLE :  </span>
+                  <span className="gage-trigger">{g.trigger || g.t}</span>
+                </div>
+                <div>
+                  <span style={{ fontFamily:'Bangers, cursive', fontSize:12, letterSpacing:1.5, color:'var(--y)', marginTop:8, marginBottom:5 }}>👉 DONNE LUI SON GAGE : </span>
+                  <span className="gage-action">{g.a}</span>
+                </div>
                 {g.i && <div className="gage-tip">💡 {g.i}</div>}
               </div>
             )
           })}
 
-          {party.allowCustomGages && (
-            <>
-              <div className="custom-toggle" onClick={() => setShowCustom(v => !v)}>
-                <span>✏️ Je veux remplacer mes gages</span>
-                <span style={{ fontSize: 18, transition: 'transform .2s', transform: showCustom ? 'rotate(180deg)' : 'none' }}>▼</span>
+          {party.allowCustomGages && showCustom && (
+            <div className="custom-box">
+              <p style={{ fontSize: 12, color: 'rgba(255,255,255,.45)', marginBottom: 12 }}>
+                Propose 1 ou 2 gages perso. Ils remplaceront tes gages automatiques.
+              </p>
+              <label className="form-label">Gage 1 — Déclencheur</label>
+              <textarea value={cg1t} onChange={e => setCg1t(e.target.value)} placeholder="Ex : Quelqu'un dit « incroyable »…" />
+              <div className="form-hint" style={{ marginBottom: 10 }}>🎯 Quelle situation déclenche le gage ?</div>
+              <label className="form-label">Gage 1 — Ce que la victime doit faire</label>
+              <textarea value={cg1a} onChange={e => setCg1a(e.target.value)} placeholder="Ex : Appeler sa maman et lui chanter Joyeux Anniversaire…" />
+              <div className="sep" />
+              <label className="form-label">Gage 2 — Déclencheur (optionnel)</label>
+              <textarea value={cg2t} onChange={e => setCg2t(e.target.value)} placeholder="Ex : Quelqu'un vérifie son horoscope…" />
+              <div className="form-hint" style={{ marginBottom: 10 }}>🎯 Quelle situation ?</div>
+              <label className="form-label">Gage 2 — Ce que la victime doit faire</label>
+              <textarea value={cg2a} onChange={e => setCg2a(e.target.value)} placeholder="Ex : Prédire l'avenir amoureux en inventant tout…" />
+
+              <div style={{ display:'flex', gap:10, marginTop:12 }}>
+                <button className="btn btn-g" style={{ flex:2, color:'var(--dk)' }} onClick={saveCustomGages}>
+                  ✅ ENREGISTRER
+                </button>
+                <button className="btn btn-ghost" style={{ flex:1 }} onClick={clearCustomGages}>
+                  ✕
+                </button>
               </div>
-
-              {showCustom && (
-                <div className="custom-box">
-                  <p style={{ fontSize: 12, color: 'rgba(255,255,255,.45)', marginBottom: 12 }}>
-                    Propose 1 ou 2 gages perso. Ils remplaceront tes gages automatiques.
-                  </p>
-                  <label className="form-label">Gage 1 — Déclencheur</label>
-                  <textarea value={cg1t} onChange={e => setCg1t(e.target.value)} placeholder="Ex : Quelqu'un dit « incroyable »…" />
-                  <div className="form-hint" style={{ marginBottom: 10 }}>🎯 Quelle situation déclenche le gage ?</div>
-                  <label className="form-label">Gage 1 — Ce que la victime doit faire</label>
-                  <textarea value={cg1a} onChange={e => setCg1a(e.target.value)} placeholder="Ex : Appeler sa maman et lui chanter Joyeux Anniversaire…" />
-                  <div className="sep" />
-                  <label className="form-label">Gage 2 — Déclencheur (optionnel)</label>
-                  <textarea value={cg2t} onChange={e => setCg2t(e.target.value)} placeholder="Ex : Quelqu'un vérifie son horoscope…" />
-                  <div className="form-hint" style={{ marginBottom: 10 }}>🎯 Quelle situation ?</div>
-                  <label className="form-label">Gage 2 — Ce que la victime doit faire</label>
-                  <textarea value={cg2a} onChange={e => setCg2a(e.target.value)} placeholder="Ex : Prédire l'avenir amoureux en inventant tout…" />
-
-                  <div style={{ display:'flex', gap:10, marginTop:12 }}>
-                    <button className="btn btn-g" style={{ flex:2, color:'var(--dk)' }} onClick={saveCustomGages}>
-                      ✅ ENREGISTRER
-                    </button>
-                    <button className="btn btn-ghost" style={{ flex:1 }} onClick={clearCustomGages}>
-                      ✕
-                    </button>
-                  </div>
-                </div>
-              )}
-            </>
+            </div>
           )}
         </div>
 
         {/* ── DÉMASQUER ── */}
-        <div style={{ margin:'0 20px 16px' }}>
-          {/* Section header with search toggle */}
-          <div style={{ display:'flex', alignItems:'center', justifyContent:'space-between', marginBottom:10 }}>
-            <div className="section-title" style={{ marginBottom:0 }}>👁️ DÉMASQUER</div>
-            {gameOpen && others.length > 0 && (
-              <button
-                onClick={() => { setSearchOpen(v => !v); setSearch('') }}
-                style={{
-                  background: searchOpen ? 'rgba(0,245,255,.12)' : 'rgba(255,255,255,.06)',
-                  border:`1px solid ${searchOpen ? 'var(--c)' : 'rgba(255,255,255,.1)'}`,
-                  color: searchOpen ? 'var(--c)' : 'rgba(255,255,255,.5)',
-                  borderRadius:10, padding:'6px 12px', fontSize:13, cursor:'pointer', fontWeight:800,
-                }}
-              >
-                🔍
-              </button>
+        {!partyEnded && (
+          <div style={{ margin:'0 20px 16px' }}>
+            {/* Section header with search toggle */}
+            <div style={{ display:'flex', alignItems:'center', justifyContent:'space-between', marginBottom:10 }}>
+              <div className="section-title" style={{ marginBottom:0 }}>👁️ DÉMASQUER</div>
+              {gameOpen && others.length > 0 && (
+                <button
+                  onClick={() => { setSearchOpen(v => !v); setSearch('') }}
+                  style={{
+                    background: searchOpen ? 'rgba(0,245,255,.12)' : 'rgba(255,255,255,.06)',
+                    border:`1px solid ${searchOpen ? 'var(--c)' : 'rgba(255,255,255,.1)'}`,
+                    color: searchOpen ? 'var(--c)' : 'rgba(255,255,255,.5)',
+                    borderRadius:10, padding:'6px 12px', fontSize:13, cursor:'pointer', fontWeight:800,
+                  }}
+                >
+                  🔍
+                </button>
+              )}
+            </div>
+
+            {/* Search bar */}
+            {searchOpen && (
+              <input
+                className="form-input"
+                style={{ marginBottom:10 }}
+                placeholder="Rechercher un invité…"
+                value={search}
+                onChange={e => setSearch(e.target.value)}
+                autoFocus
+              />
+            )}
+
+            {/* Players grid */}
+            <div className="players-grid">
+              {filteredOthers.map(p => {
+                const cnt = (player.unmaskedIds || []).includes(p.id) ? 1 : 0
+                return (
+                  <div
+                    key={p.id}
+                    className={`player-tile ${cnt ? 'selected' : ''}`}
+                    onClick={() => setPendingTarget(cnt ? null : p)}
+                    style={{ cursor: cnt ? 'default' : 'pointer' }}
+                  >
+                    {cnt > 0 && <div className="tile-badge">{cnt}</div>}
+                    <Avatar player={p} size={44} style={{ margin:'0 auto 5px', display:'block', border:'2px solid rgba(255,255,255,.12)', borderRadius:'50%' }} />
+                    <div className="tile-name">{p.name}</div>
+                    {cnt > 0 && <div className="tile-count">🎯 {cnt}×</div>}
+                  </div>
+                )
+              })}
+            </div>
+            {filteredOthers.length === 0 && (
+              <div style={{ textAlign:'center', color:'rgba(255,255,255,.3)', fontSize:12, padding:'18px 0' }}>
+                {search ? 'Aucun agent trouvé.' : 'Les autres agents apparaîtront ici !'}
+              </div>
             )}
           </div>
-
-          {/* Search bar */}
-          {searchOpen && (
-            <input
-              className="form-input"
-              style={{ marginBottom:10 }}
-              placeholder="Rechercher un invité…"
-              value={search}
-              onChange={e => setSearch(e.target.value)}
-              autoFocus
-            />
-          )}
-
-          {!gameOpen ? (
-            <div style={{
-              background:'rgba(139,92,246,.08)', border:'1px solid rgba(139,92,246,.25)',
-              borderRadius:16, padding:20, textAlign:'center',
-            }}>
-              <div style={{ fontSize:32, marginBottom:8 }}>🔒</div>
-              <div style={{ fontSize:14, fontWeight:800, color:'var(--pu)', marginBottom:6 }}>Le jeu n'a pas encore commencé !</div>
-              <div style={{ fontSize:12, color:'rgba(255,255,255,.45)', lineHeight:1.6 }}>
-                Mémorise tes gages.<br/>
-                Démasquages dès le <strong>{tsToLabel(gameStart)}</strong>
-              </div>
-            </div>
-          ) : filteredOthers.length === 0 ? (
-            <div style={{ textAlign:'center', color:'rgba(255,255,255,.3)', fontSize:12, padding:'18px 0' }}>
-              {search ? 'Aucun agent trouvé.' : 'Les autres agents apparaîtront ici !'}
-            </div>
-          ) : (
-            <>
-              <p style={{ fontSize:12, color:'rgba(255,255,255,.38)', marginBottom:10 }}>
-                Tu l'as pris en flagrant délit ? Clique sur son prénom !
-              </p>
-              <div className="players-grid">
-                {filteredOthers.map(p => {
-                  const cnt = (player.unmaskedIds||[]).filter(id => id === p.id).length
-                  return (
-                    <div
-                      key={p.id}
-                      className={`player-tile ${cnt > 0 ? 'unmasked' : ''}`}
-                      onClick={() => handleUnmask(p)}
-                    >
-                      {cnt > 0 && <div className="tile-badge">{cnt}</div>}
-                      <Avatar player={p} size={44} style={{ margin:'0 auto 5px', display:'block', border:'2px solid rgba(255,255,255,.12)', borderRadius:'50%' }} />
-                      <div className="tile-name">{p.name}</div>
-                      {cnt > 0 && <div className="tile-count">🎯 {cnt}×</div>}
-                    </div>
-                  )
-                })}
-              </div>
-            </>
-          )}
-        </div>
+        )}
 
         <div style={{ height:24 }}/>
       </div>
@@ -718,6 +959,15 @@ export default function Dashboard() {
           </div>
         </div>
       )}
+
+      {/* ── NOTIFICATIONS ── */}
+      {notifications.map(notification => (
+        <Notification
+          key={notification.id}
+          notification={notification}
+          onClose={() => removeNotification(notification.id)}
+        />
+      ))}
     </div>
   )
 }

@@ -158,24 +158,20 @@ export default function PartyPage() {
           </div>
           <div style={{ display:'flex', flexDirection:'column', gap:10, fontSize:12, color:'rgba(255,255,255,.65)', lineHeight:1.55 }}>
             <div>
-              <strong style={{ color:'#fff' }}>1) Inscris-toi</strong>
-              <div style={{ marginTop:4 }}>Tu choisis ton prénom + ton avatar. L'année de naissance sert de <strong>code de reconnexion</strong>.</div>
+              <strong style={{ color:'#fff' }}>• Inscris-toi</strong>
+              <div style={{ marginTop:4 }}>Choisis ton pseudo + avatar. L'année de naissance te sert à te reconnecter.</div>
             </div>
             <div>
-              <strong style={{ color:'#fff' }}>2) Reçois ton rôle</strong>
-              <div style={{ marginTop:4 }}>Un personnage de détective t'est attribué. Garde-le en tête : c'est ton identité pendant la soirée.</div>
+              <strong style={{ color:'#fff' }}>• Reçois tes indices</strong>
+              <div style={{ marginTop:4 }}>Après ton inscription, tu verras les actions à repérer et les gages à donner.</div>
             </div>
             <div>
-              <strong style={{ color:'#fff' }}>3) Le jeu démarre</strong>
-              <div style={{ marginTop:4 }}>À partir de <strong>{tsToLabel(gameStart)}</strong>, tu peux <strong>démasquer</strong> les autres agents.</div>
+              <strong style={{ color:'#fff' }}>• Clique sur les coupables</strong>
+              <div style={{ marginTop:4 }}>Quand tu observes une action, clique sur le joueur et donne-lui son gage !</div>
             </div>
             <div>
-              <strong style={{ color:'#fff' }}>4) Démasquer = marquer des points</strong>
-              <div style={{ marginTop:4 }}>Quand tu devines l'identité d'un joueur, tu choisis le gage que tu as déclenché et tu gagnes des points.</div>
-            </div>
-            <div>
-              <strong style={{ color:'#fff' }}>5) Si on te démasque…</strong>
-              <div style={{ marginTop:4 }}>Tu reçois un gage à faire. Les gages sont choisis parmi ceux activés par l'organisateur.</div>
+              <strong style={{ color:'#fff' }}>• Marque des points</strong>
+              <div style={{ marginTop:4 }}>Plus tu démasques, plus tu montes dans le classement. Le coupable reçoit une notification avec ton pseudo !</div>
             </div>
           </div>
         </div>
@@ -263,6 +259,25 @@ export default function PartyPage() {
                 🕵️ M'INSCRIRE !
               </button>
               <button className="btn btn-c" style={{ color:'var(--dk)' }} onClick={() => navigate(`/party/${partyId}/login`)}>
+                🔐 Déjà inscrit ? Me reconnecter
+              </button>
+            </div>
+          </>
+        )}
+
+        {party.ended && (
+          <>
+            <div style={{
+              background:'rgba(255,60,172,.06)', border:'1px solid rgba(255,60,172,.2)',
+              borderRadius:14, padding:12, textAlign:'center', marginBottom:14,
+            }}>
+              <div style={{ fontSize:14, fontWeight:800, color:'var(--p)' }}>🏁 Jeu terminé !</div>
+              <p style={{ fontSize:12, color:'rgba(255,255,255,.5)', marginTop:6 }}>
+                Consulte les résultats et le podium
+              </p>
+            </div>
+            <div style={{ display:'flex', flexDirection:'column', gap:10 }}>
+              <button className="btn btn-p" onClick={() => navigate(`/party/${partyId}/login`)}>
                 🔐 Déjà inscrit ? Me reconnecter
               </button>
             </div>

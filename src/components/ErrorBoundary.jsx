@@ -32,7 +32,7 @@ export default class ErrorBoundary extends Component {
               <div style={{ fontSize: 13, color: 'rgba(255,255,255,.6)', marginBottom: 14, lineHeight: 1.6 }}>
                 Une erreur est survenue pendant l'affichage.
                 <br />
-                Recharge la page. Si ça persiste, copie le texte ci-dessous.
+                Recharge la page. Si ça persiste, copie le texte ci-dessous et envoie-le au support.
               </div>
               <div style={{
                 background: 'rgba(0,0,0,.35)',
