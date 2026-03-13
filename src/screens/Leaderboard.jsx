@@ -8,6 +8,22 @@ const MEDALS = ['🥇','🥈','🥉']
 
 function Section({ title, color, players, scoreKey, scoreLabel }) {
   const sorted = [...players].sort((a,b) => (b[scoreKey]||0)-(a[scoreKey]||0))
+  
+  let currentPlayerId = null
+  let isConnected = false
+  
+  try {
+    const dpSession = localStorage.getItem('dp_session')
+    if (dpSession && dpSession !== 'undefined') {
+      currentPlayerId = JSON.parse(dpSession).playerId
+      isConnected = currentPlayerId !== null
+    }
+  } catch (error) {
+    console.warn('Error parsing dp_session:', error)
+    currentPlayerId = null
+    isConnected = false
+  }
+  
   return (
     <div style={{ marginBottom:24 }}>
       <div style={{ fontFamily:'Bangers,cursive', fontSize:22, color, letterSpacing:1, marginBottom:12 }}>{title}</div>
@@ -17,25 +33,79 @@ function Section({ title, color, players, scoreKey, scoreLabel }) {
       {sorted.map((p, i) => {
         const score = p[scoreKey] || 0
         const role = ROLES[p.roleIndex % ROLES.length] || ROLES[0]
+        const isCurrentPlayer = p.id === currentPlayerId
+        
         return (
           <div key={p.id} style={{
-            display:'flex', alignItems:'center', gap:12, padding:'10px 14px',
-            marginBottom:8, borderRadius:14,
-            background: i < 3 ? `rgba(${color==='var(--c)'?'0,245,255':'255,60,172'},.06)` : 'var(--cd)',
-            border: `1px solid ${i < 3 ? color : 'rgba(255,255,255,.06)'}`,
+            display:'flex', alignItems:'center', gap:12, padding: isCurrentPlayer ? '14px 18px' : '10px 14px',
+            marginBottom:8, borderRadius:16,
+            background: isCurrentPlayer 
+              ? scoreKey === 'score' ? 'rgba(0,255,120,.15)' : 'rgba(255,60,172,.15)' 
+              : i < 3 ? `rgba(${color==='var(--c)'?'0,245,255':'255,60,172'},.06)` : 'var(--cd)',
+            border: isCurrentPlayer 
+              ? scoreKey === 'score' ? '3px solid rgba(0,255,120,1)' : '3px solid var(--p)' 
+              : `1px solid ${i < 3 ? color : 'rgba(255,255,255,.06)'}`,
+            boxShadow: isCurrentPlayer 
+              ? scoreKey === 'score' ? '0 0 25px rgba(0,255,120,.4), inset 0 0 20px rgba(0,255,120,.1)' : '0 0 25px rgba(255,60,172,.4), inset 0 0 20px rgba(255,60,172,.1)'
+              : 'none',
+            transform: isCurrentPlayer ? 'scale(1.02)' : 'scale(1)',
+            transition: 'all 0.3s ease',
+            animation: isCurrentPlayer ? (scoreKey === 'score' ? 'borderFlashGreen 2s infinite' : 'borderFlashRose 2s infinite') : 'none',
+            position: 'relative'
           }}>
-            <div style={{ fontFamily:'Bangers,cursive', fontSize:20, width:28, textAlign:'center' }}>
+            <div style={{ fontFamily:'Bangers,cursive', fontSize: isCurrentPlayer ? 22 : 20, width: isCurrentPlayer ? 30 : 28, textAlign:'center' }}>
               {MEDALS[i] || <span style={{ color:'rgba(255,255,255,.3)' }}>{i+1}</span>}
             </div>
-            <Avatar player={p} size={38} style={{ border:'2px solid rgba(255,255,255,.12)', borderRadius:'50%', flexShrink:0 }} />
+            <div style={{ position: 'relative', flexShrink: 0 }}>
+              <Avatar 
+                player={p} 
+                size={isCurrentPlayer ? 44 : 38} 
+                style={{ 
+                  border: isCurrentPlayer ? (scoreKey === 'score' ? '3px solid rgba(0,255,120,1)' : '3px solid var(--p)') : '2px solid rgba(255,255,255,.12)', 
+                  borderRadius:'50%', 
+                  flexShrink:0,
+                  boxShadow: isCurrentPlayer ? (scoreKey === 'score' ? '0 0 15px rgba(0,255,120,.5)' : '0 0 15px rgba(255,60,172,.5)') : 'none'
+                }} 
+              />
+            </div>
             <div style={{ flex:1 }}>
-              <div style={{ fontWeight:800, fontSize:14 }}>{role.n} <span style={{ color:'rgba(255,255,255,.4)', fontWeight:900, fontSize:12 }}>({p.name})</span></div>
-              <div style={{ fontSize:11, color:'rgba(255,255,255,.4)' }}>
-                {score} {scoreLabel}
+              <div style={{ 
+                fontWeight:900, 
+                fontSize: isCurrentPlayer ? 16 : 14, 
+                color: isCurrentPlayer ? (scoreKey === 'score' ? 'rgba(0,255,120,1)' : 'var(--p)') : 'rgba(255,255,255,.8)',
+                textShadow: isCurrentPlayer ? (scoreKey === 'score' ? '0 0 10px rgba(0,255,120,.5)' : '0 0 10px rgba(255,60,172,.5)') : 'none'
+              }}>
+                {isConnected ? p.name : role.n}
+                {isCurrentPlayer && (
+                  <span style={{ 
+                    color: 'var(--c)', 
+                    marginLeft: 8, 
+                    fontWeight: 900,
+                    fontSize: 14,
+                    animation: 'pulse 2s infinite'
+                  }}>
+                    ← MOI
+                  </span>
+                )}
+              </div>
+              <div style={{ 
+                fontSize: isCurrentPlayer ? 12 : 11, 
+                color: isCurrentPlayer ? (scoreKey === 'score' ? 'rgba(0,255,120,1)' : 'var(--p)') : 'rgba(255,255,255,.4)',
+                fontWeight: isCurrentPlayer ? 700 : 400,
+                marginTop: 2
+              }}>
+                {isConnected ? `${role.n} • ${score} ${scoreLabel}` : `${score} ${scoreLabel}`}
               </div>
             </div>
             {i < 3 && (
-              <div style={{ fontFamily:'Bangers,cursive', fontSize:26, color }}>{score}</div>
+              <div style={{ 
+                fontFamily:'Bangers,cursive', 
+                fontSize: isCurrentPlayer ? 28 : 26, 
+                color: color,
+                textShadow: isCurrentPlayer ? (scoreKey === 'score' ? '0 0 10px rgba(0,255,120,.5)' : '0 0 10px rgba(255,60,172,.5)') : 'none'
+              }}>
+                {score}
+              </div>
             )}
           </div>
         )

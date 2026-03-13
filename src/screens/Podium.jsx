@@ -6,7 +6,8 @@ export default function Podium() {
   const { partyId } = useParams()
   const navigate = useNavigate()
   const party = useParty(partyId)
-
+  
+  
   if (!party) return (
     <div className="screen screen-bg-purple">
       <div className="bg-grid" />
@@ -69,101 +70,17 @@ export default function Podium() {
         </div>
 
         <div style={{ padding: '0 20px 30px' }}>
+          {/* Share button - navigation vers SharePage */}
+          <div style={{ marginBottom: 20, textAlign: 'center' }}>
+            <button 
+              className="btn btn-y" 
+              style={{ width:'100%' }}
+              onClick={() => navigate(`/share/${partyId}`)}
+            >
+              📱Partager
+            </button>
+          </div>
           <button className="btn btn-ghost" onClick={() => navigate(-1)}>← Retour</button>
-          
-          {/* Share buttons for podium players */}
-          {(() => {
-            const currentPlayer = players.find(p => p.id === localStorage.getItem('currentPlayerId'))
-            const top3 = [...players].sort((a, b) => (b.score || 0) - (a.score || 0)).slice(0, 3)
-            const isOnPodium = currentPlayer && top3.some(p => p.id === currentPlayer.id)
-            
-            if (!isOnPodium) return null
-            
-            const rank = top3.findIndex(p => p.id === currentPlayer?.id) + 1
-            const medals = ['🥇', '🥈', '🥉']
-            const medal = medals[rank - 1]
-            
-            const shareText = `🎉 ${medal} Je suis ${rank === 1 ? 'champion' : rank === 2 ? 'vice-champion' : 'troisième'} de Detective Party ! 🕵️‍♂️ ${currentPlayer.score} démasqués ! Viens jouer avec nous sur Detective Party ! 🎭`
-            const shareUrl = window.location.origin
-            const hashtags = 'DetectiveParty,JeuxDeSoiree,Detective,Enquete'
-            
-            return (
-              <div style={{ marginTop: 20, textAlign: 'center' }}>
-                <div style={{ fontSize: 14, fontWeight: 700, color: 'var(--y)', marginBottom: 12 }}>
-                  🏆 Partage ta victoire !
-                </div>
-                <div style={{ display: 'flex', gap: 10, justifyContent: 'center', flexWrap: 'wrap' }}>
-                  <button
-                    onClick={() => {
-                      const url = `https://www.facebook.com/sharer/sharer.php?u=${encodeURIComponent(shareUrl)}&quote=${encodeURIComponent(shareText)}`
-                      window.open(url, '_blank', 'width=600,height=400')
-                    }}
-                    style={{
-                      background: '#1877f2', color: 'white', border: 'none',
-                      borderRadius: 8, padding: '8px 16px', fontSize: 12, fontWeight: 700,
-                      cursor: 'pointer', display: 'flex', alignItems: 'center', gap: 6
-                    }}
-                  >
-                    📘 Facebook
-                  </button>
-                  
-                  <button
-                    onClick={() => {
-                      const url = `https://www.instagram.com/`
-                      window.open(url, '_blank')
-                    }}
-                    style={{
-                      background: 'linear-gradient(45deg, #f09433 0%,#e6683c 25%,#dc2743 50%,#cc2366 75%,#bc1888 100%)', 
-                      color: 'white', border: 'none',
-                      borderRadius: 8, padding: '8px 16px', fontSize: 12, fontWeight: 700,
-                      cursor: 'pointer', display: 'flex', alignItems: 'center', gap: 6
-                    }}
-                  >
-                    📷 Instagram
-                  </button>
-                  
-                  <button
-                    onClick={() => {
-                      const url = `https://www.tiktok.com/`
-                      window.open(url, '_blank')
-                    }}
-                    style={{
-                      background: '#000000', color: 'white', border: 'none',
-                      borderRadius: 8, padding: '8px 16px', fontSize: 12, fontWeight: 700,
-                      cursor: 'pointer', display: 'flex', alignItems: 'center', gap: 6
-                    }}
-                  >
-                    🎵 TikTok
-                  </button>
-                  
-                  <button
-                    onClick={() => {
-                      if (navigator.share) {
-                        navigator.share({
-                          title: 'Detective Party - 🏆 Victoire !',
-                          text: shareText,
-                          url: shareUrl
-                        })
-                      } else {
-                        navigator.clipboard.writeText(`${shareText} ${shareUrl}`)
-                        alert('Texte copié dans le presse-papiers !')
-                      }
-                    }}
-                    style={{
-                      background: 'var(--c)', color: 'var(--dk)', border: 'none',
-                      borderRadius: 8, padding: '8px 16px', fontSize: 12, fontWeight: 700,
-                      cursor: 'pointer', display: 'flex', alignItems: 'center', gap: 6
-                    }}
-                  >
-                    📋 Copier
-                  </button>
-                </div>
-                <div style={{ fontSize: 11, color: 'rgba(255,255,255,.4)', marginTop: 8 }}>
-                  Fais découvrir Detective Party à tes amis ! 🎭
-                </div>
-              </div>
-            )
-          })()}
         </div>
 
       </div>

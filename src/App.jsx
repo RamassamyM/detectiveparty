@@ -13,6 +13,7 @@ import Dashboard       from './screens/Dashboard'
 import GageHistory     from './screens/GageHistory'
 import LeaderboardPage from './screens/Leaderboard'
 import Podium          from './screens/Podium'
+import SharePage       from './screens/SharePage'
 
 export default function App() {
   return (
@@ -30,6 +31,7 @@ export default function App() {
         <Route path="/gages/:partyId/:playerId"        element={<GageHistory />} />
         <Route path="/leaderboard/:partyId"           element={<LeaderboardPage />} />
         <Route path="/podium/:partyId"                element={<Podium />} />
+        <Route path="/share/:partyId"                 element={<SharePage />} />
         <Route path="*"                               element={<Navigate to="/" />} />
       </Routes>
       <Toast />
